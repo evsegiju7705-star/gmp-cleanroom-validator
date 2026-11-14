@@ -47,6 +47,56 @@
     return h + '</tbody></table>';
   }
 
+  /* Шапка лаборатории и гриф утверждения */
+  P.head = function (state) {
+    var lab = state.lab, o = state.obj, h = '';
+    h += '<header class="lab"><div class="lab-name">' + esc(lab.name) + '</div>' +
+      (lab.short ? '<div>(' + esc(lab.short) + ')</div>' : '') +
+      '<div>' + esc(lab.unit) + '</div><div>' + esc(lab.address) + '</div>' +
+      '<div class="pre">' + esc(lab.contacts) + '</div></header>';
+
+    h += '<div class="approve"><div>УТВЕРЖДАЮ</div><div class="line">' + esc(o.approverPost) + '</div>' +
+      '<small>должность</small><div class="line sign"><span></span><span>' + esc(o.approver) + '</span></div>' +
+      '<small class="sign"><span>подпись</span><span>фамилия и инициалы</span></small></div>';
+    return h;
+  };
+
+  /* Таблица средств измерений по списку видов приборов */
+  P.tools = function (state, keys) {
+    var h = '';
+    h += '<table class="grid tools"><thead><tr><th>Средство измерения</th><th>зав. №</th><th>поверен до</th></tr></thead><tbody>';
+    keys.forEach(function (key) {
+      var ins = state.instruments.filter(function (x) { return x.type === key; })[0];
+      if (!ins || !ins.model) return;
+      h += '<tr><td>' + esc(typeName(key) + ' ' + ins.model) + '</td><td>' + esc(ins.serial) +
+        '</td><td>' + esc(calc.fmtDate(ins.validTo)) + '</td></tr>';
+    });
+    h += '</tbody></table>';
+    return h;
+  };
+
+  /* Правило принятия решения, вывод, подпись, нижняя строка */
+  P.tail = function (state, no, verdictKey) {
+    var lab = state.lab, o = state.obj, h = '';
+    h += '<h3>Правило принятия решения</h3><p>При принятии решения применяется правило простой приемки согласно ' +
+      'ILAC-G8:09/2019 Приложение В вариант а, при котором характеристика объекта принимается как соответствующая, ' +
+      'если измеренное значение находится в пределах допуска в проверенных точках и несоответствующая в противном случае.</p>' +
+      '<p>Результаты, приведенные в протоколе, применимы только к данному объекту испытаний.</p>';
+
+    var verdict = verdictKey === 'ok' ? 'Результаты измерений соответствуют критерию приемлемости.'
+      : verdictKey === 'fail' ? 'Результаты измерений не соответствуют критерию приемлемости.'
+      : 'не сформирован: измерения внесены не полностью.';
+    h += '<div class="final"><p class="verdict"><b>ВЫВОД:</b> ' + verdict + '</p>' +
+      '<div class="author"><div>Составил:</div><div class="line">' + esc(o.performerPost) + '</div><small>должность</small>' +
+      '<div class="line sign"><span></span><span>' + esc(o.performer) + '</span></div>' +
+      '<small class="sign"><span>подпись</span><span>фамилия и инициалы</span></small></div></div>';
+
+    h += '<p class="center">Окончание документа</p><footer>Протокол не должен быть воспроизведен не в полном объеме без разрешения ' +
+      esc(lab.short || lab.name) + '<span>' + esc(o.index) + ' · Протокол № ' + esc(no) + '</span></footer>';
+    return h;
+  };
+  P.row = row;
+
   P.build = function (state, room) {
     var o = state.obj, lab = state.lab, t = state.skch;
     var data = K.store.skchData(room), res = calc.skchRoom(room, data, o.special);
@@ -56,14 +106,7 @@
     var stateTxt = oper ? ' в эксплуатируемом состоянии' : '';
     var h = '<section class="sheet">';
 
-    h += '<header class="lab"><div class="lab-name">' + esc(lab.name) + '</div>' +
-      (lab.short ? '<div>(' + esc(lab.short) + ')</div>' : '') +
-      '<div>' + esc(lab.unit) + '</div><div>' + esc(lab.address) + '</div>' +
-      '<div class="pre">' + esc(lab.contacts) + '</div></header>';
-
-    h += '<div class="approve"><div>УТВЕРЖДАЮ</div><div class="line">' + esc(o.approverPost) + '</div>' +
-      '<small>должность</small><div class="line sign"><span></span><span>' + esc(o.approver) + '</span></div>' +
-      '<small class="sign"><span>подпись</span><span>фамилия и инициалы</span></small></div>';
+    h += P.head(state);
 
     h += '<h1>ПРОТОКОЛ № ' + esc(no) + ' от ' + esc(calc.fmtDate(o.protoDate)) + '</h1>' +
       '<h2>измерения концентрации аэрозольных частиц в воздухе чистого помещения (зоны)</h2>';
@@ -79,14 +122,7 @@
       row('Время пробоотбора:', smp ? calc.fmt(smp.min) + ' мин.' : '') +
       '</table>';
 
-    h += '<table class="grid tools"><thead><tr><th>Средство измерения</th><th>зав. №</th><th>поверен до</th></tr></thead><tbody>';
-    ref.skchInstruments.forEach(function (key) {
-      var ins = state.instruments.filter(function (x) { return x.type === key; })[0];
-      if (!ins || !ins.model) return;
-      h += '<tr><td>' + esc(typeName(key) + ' ' + ins.model) + '</td><td>' + esc(ins.serial) +
-        '</td><td>' + esc(calc.fmtDate(ins.validTo)) + '</td></tr>';
-    });
-    h += '</tbody></table>';
+    h += P.tools(state, ref.skchInstruments);
 
     h += '<table class="info">' +
       row('Дата измерений:', calc.fmtDate(t.date)) +
@@ -112,21 +148,7 @@
 
     h += '<h3>3. Дополнения, отклонения, исключения из метода</h3><p>' + esc(data.note || 'нет') + '</p>';
     h += '<p>Высота плоскости измерения от уровня пола 1 м.</p>';
-    h += '<h3>Правило принятия решения</h3><p>При принятии решения применяется правило простой приемки согласно ' +
-      'ILAC-G8:09/2019 Приложение В вариант а, при котором характеристика объекта принимается как соответствующая, ' +
-      'если измеренное значение находится в пределах допуска в проверенных точках и несоответствующая в противном случае.</p>' +
-      '<p>Результаты, приведенные в протоколе, применимы только к данному объекту испытаний.</p>';
-
-    var verdict = res.verdict === 'ok' ? 'Результаты измерений соответствуют критерию приемлемости.'
-      : res.verdict === 'fail' ? 'Результаты измерений не соответствуют критерию приемлемости.'
-      : 'не сформирован: измерения внесены не полностью.';
-    h += '<div class="final"><p class="verdict"><b>ВЫВОД:</b> ' + verdict + '</p>' +
-      '<div class="author"><div>Составил:</div><div class="line">' + esc(o.performerPost) + '</div><small>должность</small>' +
-      '<div class="line sign"><span></span><span>' + esc(o.performer) + '</span></div>' +
-      '<small class="sign"><span>подпись</span><span>фамилия и инициалы</span></small></div></div>';
-
-    h += '<p class="center">Окончание документа</p><footer>Протокол не должен быть воспроизведен не в полном объеме без разрешения ' +
-      esc(lab.short || lab.name) + '<span>' + esc(o.index) + ' · Протокол № ' + esc(no) + '</span></footer>';
+    h += P.tail(state, no, res.verdict);
     return h + '</section>';
   };
 

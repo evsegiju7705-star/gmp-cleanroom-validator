@@ -58,3 +58,5 @@ table.data input.short { min-width: 90px; text-align: right; }
 .preview-bar { position: sticky; top: 0; display: flex; gap: 8px; padding: 10px 20px; background: #fff; border-bottom: 1px solid var(--line); z-index: 2; }
 #preview { background: #8a939c; min-height: 100vh; }
 @media print { #app, .preview-bar { display: none !important; } #preview { background: none; } }
+table.data tr.group th { background: #f3f6f8; font-weight: 600; }
+table.data tr.group .design { font-weight: 400; color: var(--muted); margin: 0 12px; }

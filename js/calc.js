@@ -77,6 +77,50 @@
     return res;
   };
 
+  /* Проектное значение текстом: «20-24», «50±10», «не более 60», «≥18» -> {min, max}; иначе null */
+  calc.parseRange = function (text) {
+    var s = String(text == null ? '' : text).replace(/\s/g, '').replace(/,/g, '.').toLowerCase(), m;
+    var N = '(\\d+(?:\\.\\d+)?)';
+    if ((m = new RegExp('^' + N + '(?:±|\\+-|\\+/-)' + N + '$').exec(s))) return { min: +m[1] - +m[2], max: +m[1] + +m[2] };
+    if ((m = new RegExp('^(?:от)?' + N + '(?:-|–|—|\\.\\.\\.|…|до)' + N + '$').exec(s)) && +m[1] <= +m[2]) return { min: +m[1], max: +m[2] };
+    if ((m = new RegExp('^(?:≤|<=|неболее|до)' + N + '$').exec(s))) return { min: -Infinity, max: +m[1] };
+    if ((m = new RegExp('^(?:≥|>=|неменее|от)' + N + '$').exec(s))) return { min: +m[1], max: Infinity };
+    return null;
+  };
+
+  /* Значение в точке против проектного диапазона: 'ok' | 'fail' | 'none' | 'na' (норма не задана) | 'manual' (норма не распознана) */
+  calc.judgeRange = function (value, designText) {
+    if (!String(designText == null ? '' : designText).trim()) return 'na';
+    var r = calc.parseRange(designText), v = calc.num(value);
+    if (!r) return 'manual';
+    if (v === null) return 'none';
+    return v >= r.min && v <= r.max ? 'ok' : 'fail';
+  };
+
+  /* Помещение участвует в измерении температуры и влажности, если задана хотя бы одна проектная норма */
+  calc.hasClimate = function (room) {
+    var d = room.design || {};
+    return !!(String(d.temp || '').trim() || String(d.rh || '').trim());
+  };
+
+  calc.tivlRoom = function (room, data) {
+    var d = room.design || {}, res = { points: [], verdict: 'ok' }, fail = false, none = false, manual = false;
+    ((data && data.points) || []).forEach(function (p) {
+      var jt = calc.judgeRange(p.t, d.temp), jr = calc.judgeRange(p.rh, d.rh);
+      res.points.push({ t: jt, rh: jr });
+      [jt, jr].forEach(function (j) { if (j === 'fail') fail = true; if (j === 'none') none = true; if (j === 'manual') manual = true; });
+    });
+    if (!res.points.length) none = true;
+    res.verdict = fail ? 'fail' : (manual ? 'manual' : (none ? 'none' : 'ok'));
+    return res;
+  };
+
+  calc.tivlAll = function (rooms, getData) {
+    var v = { fail: 0, manual: 0, none: 0, ok: 0 };
+    rooms.forEach(function (r) { v[calc.tivlRoom(r, getData(r)).verdict]++; });
+    return !rooms.length ? 'none' : v.fail ? 'fail' : v.manual ? 'manual' : v.none ? 'none' : 'ok';
+  };
+
   /* Число, округлённое для вывода */
   calc.fmt = function (n) {
     if (n === null || n === undefined) return '';

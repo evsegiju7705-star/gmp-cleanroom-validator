@@ -16,7 +16,8 @@
         return { type: t[0], model: '', serial: '', validTo: '' };
       }),
       rooms: [],
-      skch: { date: '', flow: '28.3', firstNo: '1', rooms: {} }
+      skch: { date: '', flow: '28.3', firstNo: '1', rooms: {} },
+      tivl: { date: '', firstNo: '', env: { t: '', rh: '', p: '' }, note: '', rooms: {} }
     };
   };
 
@@ -36,12 +37,18 @@
       b.rooms = d.rooms.filter(Boolean).map(function (r) {
         return { id: r.id || uid(), no: String(r.no == null ? '' : r.no), name: String(r.name == null ? '' : r.name),
                  area: String(r.area == null ? '' : r.area), volume: String(r.volume == null ? '' : r.volume),
-                 cls: String(r.cls == null ? '' : r.cls), design: r.design || {} };
+                 cls: String(r.cls == null ? '' : r.cls),
+                 design: (r.design && typeof r.design === 'object') ? r.design : {} };
       });
     }
     if (d.skch) {
       ['date', 'flow', 'firstNo'].forEach(function (f) { if (d.skch[f] != null) b.skch[f] = String(d.skch[f]); });
       if (d.skch.rooms && typeof d.skch.rooms === 'object') b.skch.rooms = d.skch.rooms;
+    }
+    if (d.tivl) {
+      ['date', 'firstNo', 'note'].forEach(function (f) { if (d.tivl[f] != null) b.tivl[f] = String(d.tivl[f]); });
+      for (k in b.tivl.env) if (d.tivl.env && d.tivl.env[k] != null) b.tivl.env[k] = String(d.tivl.env[k]);
+      if (d.tivl.rooms && typeof d.tivl.rooms === 'object') b.tivl.rooms = d.tivl.rooms;
     }
     return b;
   };
@@ -71,6 +78,16 @@
     if (!Array.isArray(d.points)) d.points = [];
     var min = K.calc.minPoints(room.area) || 0;
     while (d.points.length < min) d.points.push({ a: ['', '', ''], b: ['', '', ''] });
+    return d;
+  };
+
+  /* Замеры температуры и влажности по помещению; по умолчанию четыре точки, как в рабочей книге */
+  store.tivlData = function (room) {
+    var all = store.state.tivl.rooms, d = all[room.id];
+    if (!d || !Array.isArray(d.points)) {
+      d = all[room.id] = { points: [] };
+      for (var i = 0; i < 4; i++) d.points.push({ t: '', rh: '' });
+    }
     return d;
   };
 

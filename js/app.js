@@ -96,10 +96,11 @@
   function viewRooms() {
     var h = '<section class="card"><h2>Помещения комплекса</h2>' +
       '<p class="note">Помещение участвует в измерении концентрации частиц, если заданы площадь и класс чистоты. ' +
-      'Число точек — минимальное по таблице А.1 ГОСТ Р ИСО 14644-1-2017.</p>';
+      'Число точек — минимальное по таблице А.1 ГОСТ Р ИСО 14644-1-2017. ' +
+      'В измерении температуры и влажности участвуют помещения с проектной нормой; её можно записать как «20-24», «50±10», «не более 60».</p>';
     if (!S().rooms.length) h += '<p class="empty">Помещений пока нет. Добавьте первое или загрузите данные из файла.</p>';
     else {
-      h += '<div class="scroll"><table class="data"><thead><tr><th>№ помещения</th><th>Наименование</th><th>Площадь, м²</th><th>Объём, м³</th><th>Класс чистоты</th><th>Точек отбора</th><th></th></tr></thead><tbody>';
+      h += '<div class="scroll"><table class="data"><thead><tr><th>№ помещения</th><th>Наименование</th><th>Площадь, м²</th><th>Объём, м³</th><th>Класс чистоты</th><th>Точек отбора</th><th>Температура по проекту, °С</th><th>Влажность по проекту, %</th><th></th></tr></thead><tbody>';
       S().rooms.forEach(function (r, i) {
         var p = 'rooms.' + i + '.';
         h += '<tr><td><input class="short" aria-label="Номер помещения" data-bind="' + p + 'no" value="' + esc(r.no) + '"></td>' +
@@ -109,6 +110,8 @@
           '<td><select aria-label="Класс чистоты" data-bind="' + p + 'cls"><option value="">не задан</option>' +
           ref.classes.map(function (c) { return '<option' + (c === r.cls ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select></td>' +
           '<td class="num" data-out="np-' + i + '">' + (calc.minPoints(r.area) || '—') + '</td>' +
+          '<td><input class="short" aria-label="Температура по проекту" placeholder="20-24" data-bind="' + p + 'design.temp" value="' + esc(r.design.temp || '') + '"></td>' +
+          '<td><input class="short" aria-label="Влажность по проекту" placeholder="50±10" data-bind="' + p + 'design.rh" value="' + esc(r.design.rh || '') + '"></td>' +
           '<td><button type="button" class="danger small" data-act="del-room" data-i="' + i + '">Удалить</button></td></tr>';
       });
       h += '</tbody></table></div>';
@@ -199,6 +202,50 @@
     return h;
   }
 
+  /* ---------- Температура и влажность ---------- */
+  var TV = { ok: ['ok', 'Да'], fail: ['bad', 'Нет'], manual: ['warn', 'Норма не распознана'], na: ['', '—'], none: ['', ''] };
+  var TV_ALL = { ok: ['ok', 'СООТВЕТСТВУЕТ'], fail: ['bad', 'НЕ СООТВЕТСТВУЕТ'], none: ['warn', 'ИЗМЕРЕНИЯ НЕ ЗАВЕРШЕНЫ'],
+                 manual: ['warn', 'ЕСТЬ НОРМЫ, КОТОРЫЕ НЕ РАСПОЗНАНЫ'] };
+
+  function viewTivl() {
+    var rooms = K.protocolTivl.rooms(S());
+    var h = '<section class="card"><h2>Параметры испытания</h2><div class="form">' +
+      field('Дата измерений', 'tivl.date', { hint: 'Текстом, например «13-17 февраля 2025 г.»' }) +
+      field('Номер протокола', 'tivl.firstNo', { mode: 'numeric', hint: 'Один протокол на все помещения' }) +
+      '</div><h3>Условия окружающей среды</h3><div class="form five">' +
+      field('Температура, °С', 'tivl.env.t', { mode: 'decimal' }) +
+      field('Влажность, %', 'tivl.env.rh', { mode: 'decimal' }) +
+      field('Давление, гПа', 'tivl.env.p', { mode: 'decimal' }) + '</div></section>';
+    if (!rooms.length) {
+      return h + '<section class="card"><p class="empty">Нет помещений с проектной температурой или влажностью. Заполните эти столбцы на вкладке «Помещения».</p></section>';
+    }
+    h += '<section class="card"><h2>Замеры</h2><p class="note">В каждую точку вносится среднее измеренное значение. ' +
+      'Каждая точка сравнивается с проектной нормой помещения.</p>' +
+      '<p class="verdict-line">Вывод по протоколу: <span class="tag big" data-out="tv-all"></span></p>' +
+      '<div class="scroll"><table class="data"><thead><tr><th>Помещение</th><th>Точка</th><th>Температура, °С</th><th>В норме</th>' +
+      '<th>Влажность, %</th><th>В норме</th></tr></thead>';
+    rooms.forEach(function (r) {
+      var pts = store.tivlData(r).points, d = r.design || {}, base = 'tivl.rooms.' + r.id + '.points.';
+      h += '<tbody><tr class="group"><th colspan="6" scope="rowgroup">' + esc(roomLabel(r)) +
+        ' <span class="design">проект: ' + esc(d.temp || '–') + ' °С; ' + esc(d.rh || '–') + ' %</span> ' +
+        '<button type="button" class="small" data-act="tv-add" data-room="' + r.id + '">Добавить точку</button> ' +
+        '<button type="button" class="small" data-act="tv-del" data-room="' + r.id + '"' + (pts.length <= 1 ? ' disabled' : '') + '>Убрать последнюю</button></th></tr>';
+      pts.forEach(function (pt, i) {
+        var lab = esc(roomLabel(r)) + ', точка ' + (i + 1);
+        h += '<tr><td></td><th scope="row">' + (i + 1) + '</th>' +
+          '<td><input class="short" inputmode="decimal" aria-label="Температура: ' + lab + '" data-bind="' + base + i + '.t" value="' + esc(pt.t) + '"></td>' +
+          '<td><span class="tag" data-out="tvt-' + r.id + '-' + i + '"></span></td>' +
+          '<td><input class="short" inputmode="decimal" aria-label="Влажность: ' + lab + '" data-bind="' + base + i + '.rh" value="' + esc(pt.rh) + '"></td>' +
+          '<td><span class="tag" data-out="tvr-' + r.id + '-' + i + '"></span></td></tr>';
+      });
+      h += '</tbody>';
+    });
+    h += '</table></div><div class="form">' +
+      field('Дополнения, отклонения, исключения из метода', 'tivl.note', { wide: true, area: true, hint: 'Если пусто, в протоколе будет «нет»' }) +
+      '</div><div class="row-actions"><button type="button" class="primary" data-act="tv-print">Протокол</button></div></section>';
+    return h;
+  }
+
   function out(key, text, cls) {
     var el = $('[data-out="' + key + '"]', view);
     if (!el) return;
@@ -222,11 +269,20 @@
         out('jb' + i, JUDGE[p.judgeB][1], JUDGE[p.judgeB][0]);
       });
       out('verdict', VERDICT[res.verdict][1], VERDICT[res.verdict][0]);
+    } else if (tab === 'tivl') {
+      K.protocolTivl.rooms(S()).forEach(function (r) {
+        calc.tivlRoom(r, store.tivlData(r)).points.forEach(function (p, i) {
+          out('tvt-' + r.id + '-' + i, TV[p.t][1], TV[p.t][0]);
+          out('tvr-' + r.id + '-' + i, TV[p.rh][1], TV[p.rh][0]);
+        });
+      });
+      var v = K.protocolTivl.verdict(S());
+      out('tv-all', TV_ALL[v][1], TV_ALL[v][0]);
     }
   }
 
   function render() {
-    var views = { general: viewGeneral, instruments: viewInstruments, rooms: viewRooms, skch: viewSkch };
+    var views = { general: viewGeneral, instruments: viewInstruments, rooms: viewRooms, skch: viewSkch, tivl: viewTivl };
     view.innerHTML = views[tab]();
     Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) {
       b.setAttribute('aria-current', b.dataset.tab === tab ? 'page' : 'false');
@@ -264,7 +320,10 @@
 
   /* ---------- просмотр и печать ---------- */
   function preview(rooms) {
-    $('#print').innerHTML = rooms.map(function (r) { return K.protocolSkch.build(S(), r); }).join('');
+    showPreview(rooms.map(function (r) { return K.protocolSkch.build(S(), r); }).join(''));
+  }
+  function showPreview(html) {
+    $('#print').innerHTML = html;
     $('#preview').hidden = false; $('#app').hidden = true;
     window.scrollTo(0, 0);
   }
@@ -292,7 +351,7 @@
     else if (act === 'del-room') {
       var r = S().rooms[+b.dataset.i];
       if (!confirm('Удалить помещение «' + roomLabel(r) + '» вместе с его замерами?')) return;
-      S().rooms.splice(+b.dataset.i, 1); delete S().skch.rooms[r.id];
+      S().rooms.splice(+b.dataset.i, 1); delete S().skch.rooms[r.id]; delete S().tivl.rooms[r.id];
     }
     else if (act === 'add-point') { store.skchData(currentRoom()).points.push({ a: ['', '', ''], b: ['', '', ''] }); }
     else if (act === 'del-point') {
@@ -307,6 +366,18 @@
     else if (act === 'paste-apply') { applyPaste(); return; }
     else if (act === 'print-one') { preview([currentRoom()]); return; }
     else if (act === 'print-all') { preview(skchRooms()); return; }
+    else if (act === 'tv-print') { showPreview(K.protocolTivl.build(S())); return; }
+    else if (act === 'tv-add' || act === 'tv-del') {
+      room = S().rooms.filter(function (x) { return x.id === b.dataset.room; })[0];
+      data = store.tivlData(room);
+      if (act === 'tv-add') data.points.push({ t: '', rh: '' });
+      else {
+        var lp = data.points[data.points.length - 1];
+        if (data.points.length <= 1) return;
+        if ((lp.t !== '' || lp.rh !== '') && !confirm('В последней точке есть показания. Убрать её?')) return;
+        data.points.pop();
+      }
+    }
     saved(); render();
   }
 
