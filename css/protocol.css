@@ -39,3 +39,6 @@
   .sheet { margin: 0; padding: 0; width: auto; break-after: page; }
   .sheet:last-child { break-after: auto; }
 }
+.sheet table.grid td.left { text-align: left; }
+.sheet tbody.keep { break-inside: avoid; }
+.sheet .small-note { font-size: 8.5pt; }
