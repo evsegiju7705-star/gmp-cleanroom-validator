@@ -6,6 +6,7 @@
   <title>Квалификация чистых помещений — расчёты GMP / ИСО 14644-1</title>
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/protocol.css">
   <link rel="stylesheet" href="css/print.css" media="print">
 </head>
 <body>
@@ -21,8 +22,7 @@
       <button type="button" class="btn" id="btn-reset">Очистить</button>
       <button type="button" class="btn" id="btn-import">Импорт JSON</button>
       <button type="button" class="btn" id="btn-export">Экспорт JSON</button>
-      <button type="button" class="btn btn--primary" id="btn-protocol" disabled
-              title="Печатная форма появится на шаге 4">Сформировать протокол</button>
+      <button type="button" class="btn btn--primary" id="btn-protocol">Сформировать протокол</button>
       <input type="file" id="file-import" accept="application/json,.json" hidden>
     </div>
   </div>
@@ -131,8 +131,7 @@
     <section class="block" aria-labelledby="h-air">
       <div class="block__head">
         <h3 id="h-air">2.1. Воздухообмен</h3>
-        <button type="button" class="btn btn--small no-print" id="btn-add-diffuser" disabled
-                title="Добавление точек появится на шаге 3">Добавить диффузор</button>
+        <button type="button" class="btn btn--small no-print" id="btn-add-diffuser">Добавить диффузор</button>
       </div>
       <div class="table-wrap">
         <table class="data-table" id="tbl-airflow">
@@ -184,12 +183,14 @@
           </tbody>
         </table>
       </div>
+      <p class="note note--warn" id="airflow-warning" role="status" hidden></p>
       <p class="note" id="crit-ach-note" hidden>
         Для зоны класса A с однонаправленным потоком показателем служит скорость потока
         (ориентир 0,36–0,54 м/с), а не кратность. Оставьте критерий пустым, если кратность не оценивается.
       </p>
       <p class="note">
-        Кратность = суммарный расход ÷ объём помещения. Документы GMP значение кратности не нормируют:
+        Кратность = суммарный расход ÷ объём помещения; с критерием сравнивается значение,
+        округлённое до 0,1 ч⁻¹. Документы GMP значение кратности не нормируют:
         критерий берётся из проекта или URS, по умолчанию подставлено ориентировочное значение.
       </p>
     </section>
@@ -279,8 +280,7 @@
     <section class="block" aria-labelledby="h-part">
       <div class="block__head">
         <h3 id="h-part">2.3. Счётная концентрация аэрозольных частиц</h3>
-        <button type="button" class="btn btn--small no-print" id="btn-add-point" disabled
-                title="Добавление точек появится на шаге 3">Добавить точку отбора</button>
+        <button type="button" class="btn btn--small no-print" id="btn-add-point">Добавить точку отбора</button>
       </div>
       <div class="table-wrap">
         <table class="data-table" id="tbl-particles">
@@ -290,34 +290,42 @@
               <th scope="col">Точка отбора проб</th>
               <th scope="col" class="num">≥ 0,5 мкм, шт./м³</th>
               <th scope="col" class="num">≥ 5,0 мкм, шт./м³</th>
+              <th scope="col" class="col-status">Заключение по точке</th>
               <th scope="col" class="col-act no-print"><span class="sr-only">Действия</span></th>
             </tr>
           </thead>
           <tbody id="particles-body">
-            <tr class="empty-row"><td colspan="5">Точки отбора проб не добавлены.</td></tr>
+            <tr class="empty-row"><td colspan="6">Точки отбора проб не добавлены.</td></tr>
           </tbody>
           <tfoot>
             <tr>
-              <th scope="row" colspan="2">Среднее по помещению</th>
+              <th scope="row" colspan="2">Среднее по помещению (справочно)</th>
               <td class="num" id="out-p05-avg">—</td>
               <td class="num" id="out-p50-avg">—</td>
-              <td class="no-print"></td>
+              <td colspan="2" class="tfoot-fill"></td>
             </tr>
             <tr>
               <th scope="row" colspan="2">Максимум по точкам</th>
               <td class="num" id="out-p05-max">—</td>
               <td class="num" id="out-p50-max">—</td>
-              <td class="no-print"></td>
+              <td colspan="2" class="tfoot-fill"></td>
+            </tr>
+            <tr>
+              <th scope="row" colspan="2">Предел для класса и состояния</th>
+              <td class="num" id="out-p05-lim">—</td>
+              <td class="num" id="out-p50-lim">—</td>
+              <td colspan="2" class="tfoot-fill"></td>
             </tr>
             <tr>
               <th scope="row" colspan="2">Заключение</th>
-              <td><span class="status status--none" id="st-p05">НЕТ ДАННЫХ</span></td>
-              <td><span class="status status--none" id="st-p50">НЕТ ДАННЫХ</span></td>
-              <td class="no-print"></td>
+              <td class="num"><span class="status status--none" id="st-p05">НЕТ ДАННЫХ</span></td>
+              <td class="num"><span class="status status--none" id="st-p50">НЕТ ДАННЫХ</span></td>
+              <td colspan="2" class="tfoot-fill"></td>
             </tr>
           </tfoot>
         </table>
       </div>
+      <p class="note note--warn" id="particles-warning" role="status" hidden></p>
       <p class="note">
         По ГОСТ Р ИСО 14644-1-2017 помещение соответствует классу, если концентрация в каждой точке
         отбора не превышает предел. Среднее по помещению приводится справочно.
@@ -382,7 +390,7 @@
 
 </main>
 
-<!-- Контейнер печатной формы протокола (шаг 4) -->
+<!-- Контейнер печатной формы протокола: заполняется js/protocol.js -->
 <div id="protocol" class="protocol" hidden></div>
 
 <footer class="app-footer no-print">

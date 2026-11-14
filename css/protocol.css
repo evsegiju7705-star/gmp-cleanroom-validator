@@ -1,0 +1,94 @@
+/* ==========================================================================
+   protocol.css — протокол квалификации: просмотр на экране и печать (шаг 4)
+   Режим включается классом is-protocol на <body>.
+   ========================================================================== */
+body.is-protocol .app-header,
+body.is-protocol .app-main,
+body.is-protocol .app-footer { display: none; }
+
+body.is-protocol { background: #d9dedd; }
+
+.p-toolbar {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px;
+  padding: 10px 20px;
+  background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.p-warning {
+  max-width: 210mm; margin: 16px auto 0; padding: 10px 14px;
+  border-left: 3px solid var(--warn); background: #fbf3df; color: #5c3d00;
+  font-size: 14px;
+}
+
+/* ---------- лист ---------- */
+.p-sheet {
+  max-width: 210mm; margin: 16px auto 32px; padding: 15mm 15mm 18mm 20mm;
+  background: #fff; color: #000;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.18);
+  font: 11pt/1.35 "Times New Roman", Times, "Liberation Serif", serif;
+}
+.p-sheet h1 { font-size: 15pt; font-weight: 700; text-align: center; letter-spacing: 0.02em; margin-top: 8mm; }
+.p-sheet h2 { font-size: 12pt; font-weight: 700; margin: 6mm 0 2.5mm; }
+.p-sheet h3 { font-size: 11pt; font-weight: 700; margin: 4mm 0 2mm; }
+.p-sheet p { margin: 0; }
+.p-subtitle { text-align: center; font-size: 13pt; margin-top: 1mm !important; }
+.p-date { text-align: center; margin-top: 3mm !important; }
+.p-org { font-size: 11pt; }
+
+.p-line { display: inline-block; width: 40mm; border-bottom: 0.5pt solid #000; vertical-align: baseline; height: 1em; }
+.p-line--short { width: 28mm; }
+.p-line--long { width: 110mm; }
+
+/* ---------- таблицы ---------- */
+.p-table { width: 100%; border-collapse: collapse; font-size: 10.5pt; }
+.p-table th, .p-table td {
+  border: 0.5pt solid #000; padding: 1.2mm 2mm;
+  text-align: left; vertical-align: middle; font-weight: 400;
+}
+.p-table thead th { font-weight: 700; text-align: center; }
+.p-table tfoot th, .p-table tfoot td { font-weight: 700; }
+.p-table .p-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.p-table thead .p-num { text-align: center; white-space: normal; }
+.p-col-n { width: 10mm; }
+.p-table--kv th { width: 42%; }
+.p-table--blank td { height: 8mm; }
+.p-empty { text-align: center !important; font-style: italic; }
+.p-formula { margin-top: 2mm !important; font-size: 10.5pt; }
+
+.p-status { font-weight: 700; font-size: 9.5pt; white-space: nowrap; }
+.p-status--ok { color: #17693f; }
+.p-status--fail { color: #a8231c; }
+.p-status--other { font-weight: 400; }
+
+/* ---------- заключение и подписи ---------- */
+.p-conclusion p + p { margin-top: 2mm; }
+.p-verdict { padding: 3mm; border: 1pt solid #000; }
+
+.p-signatures { margin-top: 10mm; }
+.p-sign-table { width: 100%; border-collapse: collapse; font-size: 10.5pt; }
+.p-sign-table th { text-align: left; font-weight: 400; width: 34mm; padding: 5mm 2mm 0 0; vertical-align: top; white-space: nowrap; }
+.p-sign-table td { padding: 5mm 2mm 0; vertical-align: top; text-align: center; }
+.p-sign { display: block; min-height: 1.35em; border-bottom: 0.5pt solid #000; }
+.p-sign-table small { font-size: 8pt; }
+
+@media (max-width: 820px) {
+  .p-sheet { padding: 16px; margin: 12px; overflow-x: auto; }
+  .p-line--long { width: 50%; }
+}
+
+/* ---------- печать ---------- */
+@media print {
+  @page {
+    size: A4;
+    margin: 15mm 15mm 18mm 20mm;
+    @bottom-right { content: "Стр. " counter(page) " из " counter(pages); font: 9pt "Times New Roman", serif; }
+  }
+  body.is-protocol { background: #fff; }
+  .protocol { display: block; }
+  .p-sheet { max-width: none; margin: 0; padding: 0; box-shadow: none; overflow: visible; }
+  .p-status--ok, .p-status--fail { color: #000; }      /* вывод не зависит от цветной печати */
+  .p-table thead { display: table-header-group; }      /* шапка таблицы на каждой странице */
+  .p-table tr, .p-sign-table tr { break-inside: avoid; page-break-inside: avoid; }
+  .p-sheet h2, .p-sheet h3 { break-after: avoid; page-break-after: avoid; }
+  .p-conclusion, .p-signatures, .p-table--kv, .p-table--blank { break-inside: avoid; page-break-inside: avoid; }
+}

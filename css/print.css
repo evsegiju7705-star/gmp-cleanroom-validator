@@ -1,0 +1,19 @@
+/* ==========================================================================
+   print.css — печать экрана ввода данных (подключён с media="print").
+   Оформление протокола квалификации находится в protocol.css.
+   ========================================================================== */
+.no-print { display: none !important; }
+
+body:not(.is-protocol) { background: #fff; color: #000; font-size: 11pt; }
+body:not(.is-protocol) .app-main { max-width: none; padding: 0; display: block; }
+body:not(.is-protocol) .card { border: 0; padding: 0; margin: 0 0 8mm; }
+body:not(.is-protocol) .data-table th,
+body:not(.is-protocol) .data-table td { border-color: #000; }
+body:not(.is-protocol) .data-table thead th,
+body:not(.is-protocol) .data-table tfoot th,
+body:not(.is-protocol) .data-table tfoot td { background: #fff; color: #000; }
+body:not(.is-protocol) input,
+body:not(.is-protocol) select,
+body:not(.is-protocol) .output { border: 0 !important; background: transparent !important; padding: 0 !important; min-height: 0 !important; }
+body:not(.is-protocol) tr,
+body:not(.is-protocol) .block { break-inside: avoid; }
