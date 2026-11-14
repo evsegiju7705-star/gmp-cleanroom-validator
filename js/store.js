@@ -11,14 +11,15 @@
       lab: { name: '', short: '', unit: '', address: '', contacts: '' },
       obj: { object: '', customer: '', inn: '', location: '', index: 'КЧП', registry: '',
              performer: '', performerPost: '', approver: '', approverPost: '',
-             special: 'нет', ventMode: 'Рабочий (основной)', protoDate: '' },
+             special: 'нет', ventMode: 'Рабочий (основной)', protoDate: '', firstNo: '' },
       instruments: ref.instrumentTypes.map(function (t) {
         return { type: t[0], model: '', serial: '', validTo: '' };
       }),
       rooms: [],
-      skch: { date: '', flow: '28.3', firstNo: '1', rooms: {} },
+      skch: { date: '', flow: '28.3', firstNo: '', rooms: {} },
       tivl: { date: '', firstNo: '', env: { t: '', rh: '', p: '' }, note: '', rooms: {} },
-      t: {}
+      t: {},
+      schemes: {}
     };
   };
 
@@ -47,6 +48,7 @@
       if (d.skch.rooms && typeof d.skch.rooms === 'object') b.skch.rooms = d.skch.rooms;
     }
     if (d.t && typeof d.t === 'object' && !Array.isArray(d.t)) b.t = d.t;
+    if (d.schemes && typeof d.schemes === 'object' && !Array.isArray(d.schemes)) b.schemes = d.schemes;
     if (d.tivl) {
       ['date', 'firstNo', 'note'].forEach(function (f) { if (d.tivl[f] != null) b.tivl[f] = String(d.tivl[f]); });
       for (k in b.tivl.env) if (d.tivl.env && d.tivl.env[k] != null) b.tivl.env[k] = String(d.tivl.env[k]);

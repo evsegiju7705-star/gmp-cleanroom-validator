@@ -8,10 +8,7 @@
   P.rooms = function (state) { return state.rooms.filter(calc.hasClimate); };
 
   P.number = function (state) {
-    var n = String(state.tivl.firstNo || '').trim();
-    if (!n) return '';
-    var prefix = String(state.obj.registry || '').substr(4, 3);
-    return (prefix ? prefix + ' - ' : '') + n;
+    return K.numbering.format(state, K.numbering.start(state, 'tivl'));
   };
 
   P.verdict = function (state) {

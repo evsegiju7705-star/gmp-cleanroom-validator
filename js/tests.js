@@ -84,7 +84,8 @@
   var IN_KINDS = ['Приток', 'Внутр. очистка', 'Переток'], OUT_KINDS = ['Вытяжка', 'Внутр. очистка', 'Переток'];
   function terminalCols(kinds) {
     return [{ k: 'kind', label: 'Вид', options: kinds, def: kinds[0] }, { k: 'sys', label: 'Система', text: true },
-      { k: 'name', label: 'Обозначение', text: true }, { k: 'v', label: 'Скорость, м/с' }, { k: 'area', label: 'Проходное сечение, м²' }];
+      { k: 'name', label: 'Обозначение', text: true }, { k: 'v', label: 'Скорость, м/с' }, { k: 'area', label: 'Проходное сечение, м²' },
+      { k: 'qp', label: 'Расход по проекту, м³/ч' }];
   }
   var TERM_OUTS = [{ k: 'verr', label: 'Погрешность скорости, м/с' }, { k: 'q', label: 'Объём воздуха, м³/ч' }];
   function flowGroup(rows, kinds) {

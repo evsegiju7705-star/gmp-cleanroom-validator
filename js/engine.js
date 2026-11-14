@@ -48,10 +48,10 @@
     return K.tests.overall(def.rooms(S()).map(function (r) { return E.calcRoom(def, r).verdict; }));
   };
   E.number = function (def, room) {
-    var first = calc.num(E.data(def).firstNo);
+    var first = K.numbering.start(S(), def.key);
     if (first === null) return '';
-    var prefix = String(S().obj.registry || '').substr(4, 3), i = def.perRoom ? def.rooms(S()).indexOf(room) : 0;
-    return (prefix ? prefix + ' - ' : '') + (first + Math.max(i, 0));
+    var i = def.perRoom ? def.rooms(S()).indexOf(room) : 0;
+    return K.numbering.format(S(), first + Math.max(i, 0));
   };
   function currentRoom(def) {
     var list = def.rooms(S()), id = E.cur[def.key];
@@ -107,7 +107,7 @@
     var t = E.data(def), base = 't.' + def.key + '.', rooms = def.rooms(S());
     var h = '<section class="card"><h2>Параметры испытания</h2><div class="form">' +
       K.ui.field('Дата измерений', base + 'date', { hint: 'Текстом, например «25 сентября 2025 г.»' }) +
-      K.ui.field(def.perRoom ? 'Номер первого протокола' : 'Номер протокола', base + 'firstNo', { mode: 'numeric' }) +
+      K.ui.field(def.perRoom ? 'Номер первого протокола' : 'Номер протокола', base + 'firstNo', { mode: 'numeric', hint: 'Пусто — по сквозной нумерации: ' + (E.number(def, def.rooms(S())[0]) || 'не задана') }) +
       (def.extras || []).map(function (x) { return K.ui.field(x.label, base + 'x.' + x.k, x.options ? { options: x.options } : {}); }).join('') +
       '</div><h3>Условия окружающей среды</h3><div class="form five">' +
       envKeys(def).map(function (e) { return K.ui.field(e[1], base + 'env.' + e[0], { mode: 'decimal' }); }).join('') + '</div></section>';
@@ -170,7 +170,7 @@
   /* Возвращает true, если данные изменились и экран нужно перерисовать */
   E.click = function (def, btn) {
     var act = btn.dataset.act;
-    if (act === 'e-print') { K.ui.showPreview(E.buildAll(def)); return false; }
+    if (act === 'e-print') { K.ui.showPreview(E.buildAll(def) + K.extras.appendix(def.key) + K.extras.schemeSheets(def.key)); return false; }
     if (act === 'e-print-one') { K.ui.showPreview(E.build(def, [currentRoom(def)])); return false; }
     var room = roomById(btn.dataset.room), g = def.groups.filter(function (x) { return x.k === btn.dataset.g; })[0];
     if (!room || !g) return false;

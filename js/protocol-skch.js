@@ -26,10 +26,9 @@
   /* Номер протокола: три знака номера в реестре (с 5-го) и порядковый номер */
   P.number = function (state, room) {
     var list = P.rooms(state).map(function (r) { return r.id; }), i = list.indexOf(room.id);
-    var first = calc.num(state.skch.firstNo);
+    var first = K.numbering.start(state, 'skch');
     if (i < 0 || first === null) return '';
-    var prefix = String(state.obj.registry || '').substr(4, 3);
-    return (prefix ? prefix + ' - ' : '') + (first + i);
+    return K.numbering.format(state, first + i);
   };
 
   function typeName(key) {

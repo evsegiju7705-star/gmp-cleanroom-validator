@@ -55,6 +55,7 @@
       field('Местонахождение объекта', 'obj.location', { wide: true }) +
       field('Номер в реестре', 'obj.registry', { hint: 'Знаки с 5-го по 7-й идут в номер протокола' }) +
       field('Дата протокола', 'obj.protoDate', { type: 'date' }) +
+      field('Номер первого протокола', 'obj.firstNo', { mode: 'numeric', hint: 'Дальше номера идут подряд по испытаниям, как в рабочей книге' }) +
       '</div></section>' +
       '<section class="card"><h2>Исполнители и условия</h2><div class="form">' +
       field('Измерения провёл (фамилия и инициалы)', 'obj.performer') +
@@ -171,7 +172,7 @@
     var h = '<section class="card"><h2>Параметры испытания</h2><div class="form">' +
       field('Дата измерений', 'skch.date', { type: 'date' }) +
       field('Расход счётчика частиц, л/мин', 'skch.flow', { options: ['28.3', '2.83'] }) +
-      field('Номер первого протокола', 'skch.firstNo', { mode: 'numeric' }) +
+      field('Номер первого протокола', 'skch.firstNo', { mode: 'numeric', hint: 'Пусто — по сквозной нумерации' }) +
       '</div></section>';
     var list = skchRooms(), room = currentRoom();
     if (!room) {
@@ -230,7 +231,7 @@
     var rooms = K.protocolTivl.rooms(S());
     var h = '<section class="card"><h2>Параметры испытания</h2><div class="form">' +
       field('Дата измерений', 'tivl.date', { hint: 'Текстом, например «13-17 февраля 2025 г.»' }) +
-      field('Номер протокола', 'tivl.firstNo', { mode: 'numeric', hint: 'Один протокол на все помещения' }) +
+      field('Номер протокола', 'tivl.firstNo', { mode: 'numeric', hint: 'Один протокол на все помещения. Пусто — по сквозной нумерации' }) +
       '</div><h3>Условия окружающей среды</h3><div class="form five">' +
       field('Температура, °С', 'tivl.env.t', { mode: 'decimal' }) +
       field('Влажность, %', 'tivl.env.rh', { mode: 'decimal' }) +
@@ -304,7 +305,9 @@
 
   function render() {
     var views = { general: viewGeneral, instruments: viewInstruments, rooms: viewRooms, skch: viewSkch, tivl: viewTivl };
-    view.innerHTML = views[tab] ? views[tab]() : K.engine.view(K.tests.byKey[tab]);
+    var isTest = tab === 'skch' || tab === 'tivl' || !!K.tests.byKey[tab];
+    view.innerHTML = (tab === 'passport' ? K.passport.view() : views[tab] ? views[tab]() : K.engine.view(K.tests.byKey[tab])) +
+      (isTest ? K.extras.schemesCard(tab) : '');
     Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) {
       b.setAttribute('aria-current', b.dataset.tab === tab ? 'page' : 'false');
     });
@@ -340,8 +343,9 @@
   }
 
   /* ---------- просмотр и печать ---------- */
-  function preview(rooms) {
-    showPreview(rooms.map(function (r) { return K.protocolSkch.build(S(), r); }).join(''));
+  function preview(rooms, withAppendix) {
+    showPreview(rooms.map(function (r) { return K.protocolSkch.build(S(), r); }).join('') +
+      (withAppendix ? K.extras.appendix('skch') + K.extras.schemeSheets('skch') : ''));
   }
   function showPreview(html) {
     $('#print').innerHTML = html;
@@ -364,6 +368,24 @@
     if (!path) return;
     /* поля, от которых зависит состав экрана */
     if (/^skch\.(flow|firstNo)$/.test(path) || path === 'obj.special') render();
+  }
+  function onFiles(e) {
+    if (e.target.id !== 'scheme-file') return;
+    var files = Array.prototype.slice.call(e.target.files || []), key = tab, left = files.length, bad = 0;
+    if (!left) return;
+    files.forEach(function (f) {
+      K.extras.shrink(f, function (data) {
+        if (data) {
+          var list = K.extras.schemes(key);
+          list.push({ name: f.name, data: data });
+          if (!store.save()) { list.pop(); bad++; }
+        } else bad++;
+        if (--left === 0) {
+          saved(); render();
+          if (bad) $('#scheme-msg').textContent = 'Не добавлено файлов: ' + bad + '. Файл не является картинкой или в хранилище браузера не хватило места.';
+        }
+      });
+    });
   }
   function onClick(e) {
     var b = e.target.closest('[data-act]');
@@ -389,8 +411,13 @@
     else if (act === 'paste-toggle') { pasteOpen = !pasteOpen; render(); if (pasteOpen) $('#paste-box').focus(); return; }
     else if (act === 'paste-apply') { applyPaste(); return; }
     else if (act === 'print-one') { preview([currentRoom()]); return; }
-    else if (act === 'print-all') { preview(skchRooms()); return; }
-    else if (act === 'tv-print') { showPreview(K.protocolTivl.build(S())); return; }
+    else if (act === 'print-all') { preview(skchRooms(), true); return; }
+    else if (act === 'pass-print') { showPreview(K.passport.build()); return; }
+    else if (act === 'scheme-del') {
+      if (!confirm('Удалить схему?')) return;
+      K.extras.schemes(tab).splice(+b.dataset.i, 1);
+    }
+    else if (act === 'tv-print') { showPreview(K.protocolTivl.build(S()) + K.extras.schemeSheets('tivl')); return; }
     else if (act === 'tv-add' || act === 'tv-del') {
       room = S().rooms.filter(function (x) { return x.id === b.dataset.room; })[0];
       data = store.tivlData(room);
@@ -418,6 +445,7 @@
     view.addEventListener('input', onInput);
     view.addEventListener('change', onChange);
     view.addEventListener('click', onClick);
+    view.addEventListener('change', onFiles);
     view.addEventListener('paste', function (e) {
       var def = K.tests.byKey[tab], inp = e.target;
       if (!def || !inp.dataset || !inp.dataset.grid || !e.clipboardData) return;
@@ -426,7 +454,7 @@
     K.ui = { field: field, showPreview: showPreview };
     $('#tabs').insertAdjacentHTML('beforeend', K.tests.list.map(function (d) {
       return '<button type="button" data-tab="' + d.key + '">' + esc(d.tab) + '</button>';
-    }).join(''));
+    }).join('') + '<button type="button" data-tab="passport">Паспорт систем</button>');
     $('#tabs').addEventListener('click', function (e) {
       var b = e.target.closest('[data-tab]');
       if (b) { tab = b.dataset.tab; pasteOpen = false; render(); }
