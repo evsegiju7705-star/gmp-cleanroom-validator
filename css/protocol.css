@@ -34,3 +34,4 @@
 }
 .sheet table.grid td.left { text-align: left; }
 .sheet tbody.keep { break-inside: avoid; }
+.sheet .small-note { font-size: 8.5pt; }

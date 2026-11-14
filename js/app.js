@@ -93,6 +93,14 @@
   }
 
   /* ---------- Помещения ---------- */
+  /* Проектные величины: [ключ, заголовок, пример] */
+  var DESIGN = [
+    ['temp', 'Температура, °С', '20-24'], ['rh', 'Влажность, %', '50±10'], ['pressure', 'Подпор, Па', '15'],
+    ['supply', 'Приток, м³/ч'], ['recirc', 'Внутр. очистка, м³/ч'], ['flowIn', 'Переток (+), м³/ч'], ['flowOut', 'Переток (−), м³/ч'],
+    ['exhaust', 'Вытяжка, м³/ч'], ['ach', 'Кратность, ч⁻¹'], ['lux', 'Освещённость, лк'], ['lightIndex', 'Индекс помещения'],
+    ['noise', 'Уровень звука, дБА'], ['filterClass', 'Целостность: класс фильтра', 'H14'], ['effClass', 'Эффективность: класс фильтра', 'H14'],
+    ['uniform', 'Однородность потока', 'да'], ['recovery', 'Время восстановления', 'да'], ['zoneArea', 'Площадь рабочей зоны, м²']
+  ];
   function viewRooms() {
     var h = '<section class="card"><h2>Помещения комплекса</h2>' +
       '<p class="note">Помещение участвует в измерении концентрации частиц, если заданы площадь и класс чистоты. ' +
@@ -100,7 +108,7 @@
       'В измерении температуры и влажности участвуют помещения с проектной нормой; её можно записать как «20-24», «50±10», «не более 60».</p>';
     if (!S().rooms.length) h += '<p class="empty">Помещений пока нет. Добавьте первое или загрузите данные из файла.</p>';
     else {
-      h += '<div class="scroll"><table class="data"><thead><tr><th>№ помещения</th><th>Наименование</th><th>Площадь, м²</th><th>Объём, м³</th><th>Класс чистоты</th><th>Точек отбора</th><th>Температура по проекту, °С</th><th>Влажность по проекту, %</th><th></th></tr></thead><tbody>';
+      h += '<div class="scroll"><table class="data"><thead><tr><th>№ помещения</th><th>Наименование</th><th>Площадь, м²</th><th>Объём, м³</th><th>Класс чистоты</th><th>Точек отбора</th><th></th></tr></thead><tbody>';
       S().rooms.forEach(function (r, i) {
         var p = 'rooms.' + i + '.';
         h += '<tr><td><input class="short" aria-label="Номер помещения" data-bind="' + p + 'no" value="' + esc(r.no) + '"></td>' +
@@ -110,20 +118,31 @@
           '<td><select aria-label="Класс чистоты" data-bind="' + p + 'cls"><option value="">не задан</option>' +
           ref.classes.map(function (c) { return '<option' + (c === r.cls ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select></td>' +
           '<td class="num" data-out="np-' + i + '">' + (calc.minPoints(r.area) || '—') + '</td>' +
-          '<td><input class="short" aria-label="Температура по проекту" placeholder="20-24" data-bind="' + p + 'design.temp" value="' + esc(r.design.temp || '') + '"></td>' +
-          '<td><input class="short" aria-label="Влажность по проекту" placeholder="50±10" data-bind="' + p + 'design.rh" value="' + esc(r.design.rh || '') + '"></td>' +
           '<td><button type="button" class="danger small" data-act="del-room" data-i="' + i + '">Удалить</button></td></tr>';
       });
       h += '</tbody></table></div>';
     }
-    return h + '<p><button type="button" class="primary" data-act="add-room">Добавить помещение</button></p></section>';
+    h += '<p><button type="button" class="primary" data-act="add-room">Добавить помещение</button></p></section>';
+    if (S().rooms.length) {
+      h += '<section class="card"><h2>Проектные данные</h2><p class="note">Испытание проводится для помещения, если заполнена его проектная величина. ' +
+        'Пустая ячейка — помещение в испытании не участвует.</p><div class="scroll"><table class="data design"><thead><tr><th>Помещение</th>' +
+        DESIGN.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
+      S().rooms.forEach(function (r, i) {
+        h += '<tr><th scope="row">' + esc(roomLabel(r)) + '</th>' + DESIGN.map(function (c) {
+          return '<td><input class="short" aria-label="' + esc(c[1] + ': ' + roomLabel(r)) + '" placeholder="' + (c[2] || '') +
+            '" data-bind="rooms.' + i + '.design.' + c[0] + '" value="' + esc(r.design[c[0]] == null ? '' : r.design[c[0]]) + '"></td>';
+        }).join('') + '</tr>';
+      });
+      h += '</tbody></table></div></section>';
+    }
+    return h;
   }
 
   /* ---------- Концентрация частиц ---------- */
   var VERDICT = { ok: ['ok', 'СООТВЕТСТВУЕТ'], fail: ['bad', 'НЕ СООТВЕТСТВУЕТ'], none: ['warn', 'ИЗМЕРЕНИЯ НЕ ЗАВЕРШЕНЫ'] };
   var JUDGE = { ok: ['ok', 'Да'], fail: ['bad', 'Нет'], na: ['', '—'], none: ['', ''] };
 
-  function skchRooms() { return S().rooms.filter(calc.isClassified); }
+  function skchRooms() { return K.protocolSkch.rooms(S()); }
   function currentRoom() {
     var list = skchRooms();
     var r = list.filter(function (x) { return x.id === currentRoomId; })[0] || list[0] || null;
@@ -165,7 +184,7 @@
       '<div class="field wide"><label for="room-select">Помещение</label><select id="room-select">' +
       list.map(function (r) {
         var v = calc.skchRoom(r, store.skchData(r), S().obj.special).verdict;
-        return '<option value="' + r.id + '"' + (r === room ? ' selected' : '') + '>' + esc(roomLabel(r)) +
+        return '<option value="' + r.id + '"' + (r.id === room.id ? ' selected' : '') + '>' + esc(roomLabel(r)) +
           ' · ' + (v === 'ok' ? 'соответствует' : v === 'fail' ? 'не соответствует' : 'не завершено') + '</option>';
       }).join('') + '</select></div></div>' +
       '<dl class="facts"><div><dt>Протокол №</dt><dd>' + esc(K.protocolSkch.number(S(), room)) + '</dd></div>' +
@@ -278,12 +297,14 @@
       });
       var v = K.protocolTivl.verdict(S());
       out('tv-all', TV_ALL[v][1], TV_ALL[v][0]);
+    } else if (K.tests.byKey[tab]) {
+      K.engine.refresh(K.tests.byKey[tab], view);
     }
   }
 
   function render() {
     var views = { general: viewGeneral, instruments: viewInstruments, rooms: viewRooms, skch: viewSkch, tivl: viewTivl };
-    view.innerHTML = views[tab]();
+    view.innerHTML = views[tab] ? views[tab]() : K.engine.view(K.tests.byKey[tab]);
     Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) {
       b.setAttribute('aria-current', b.dataset.tab === tab ? 'page' : 'false');
     });
@@ -338,6 +359,7 @@
   }
   function onChange(e) {
     if (e.target.id === 'room-select') { currentRoomId = e.target.value; pasteOpen = false; render(); return; }
+    if (e.target.id === 'e-room') { K.engine.selectRoom(K.tests.byKey[tab], e.target.value); render(); return; }
     var path = e.target.dataset && e.target.dataset.bind;
     if (!path) return;
     /* поля, от которых зависит состав экрана */
@@ -347,11 +369,13 @@
     var b = e.target.closest('[data-act]');
     if (!b) return;
     var act = b.dataset.act, room, data;
+    if (/^e-/.test(act)) { if (K.engine.click(K.tests.byKey[tab], b)) { saved(); render(); } return; }
     if (act === 'add-room') { store.addRoom(); }
     else if (act === 'del-room') {
       var r = S().rooms[+b.dataset.i];
       if (!confirm('Удалить помещение «' + roomLabel(r) + '» вместе с его замерами?')) return;
-      S().rooms.splice(+b.dataset.i, 1); delete S().skch.rooms[r.id]; delete S().tivl.rooms[r.id];
+      S().rooms.splice(+b.dataset.i, 1); delete S().skch.rooms[r.id]; delete S().skch.rooms[r.id + '_z']; delete S().tivl.rooms[r.id];
+      Object.keys(S().t).forEach(function (k) { if (S().t[k].rooms) delete S().t[k].rooms[r.id]; });
     }
     else if (act === 'add-point') { store.skchData(currentRoom()).points.push({ a: ['', '', ''], b: ['', '', ''] }); }
     else if (act === 'del-point') {
@@ -394,6 +418,15 @@
     view.addEventListener('input', onInput);
     view.addEventListener('change', onChange);
     view.addEventListener('click', onClick);
+    view.addEventListener('paste', function (e) {
+      var def = K.tests.byKey[tab], inp = e.target;
+      if (!def || !inp.dataset || !inp.dataset.grid || !e.clipboardData) return;
+      if (K.engine.paste(def, inp, e.clipboardData.getData('text'))) { e.preventDefault(); saved(); render(); }
+    });
+    K.ui = { field: field, showPreview: showPreview };
+    $('#tabs').insertAdjacentHTML('beforeend', K.tests.list.map(function (d) {
+      return '<button type="button" data-tab="' + d.key + '">' + esc(d.tab) + '</button>';
+    }).join(''));
     $('#tabs').addEventListener('click', function (e) {
       var b = e.target.closest('[data-tab]');
       if (b) { tab = b.dataset.tab; pasteOpen = false; render(); }

@@ -10,9 +10,22 @@
   }
   P.esc = esc;
 
+  /* Помещения испытания; для помещения с рабочей зоной добавляется отдельная запись зоны */
+  P.rooms = function (state) {
+    var out = [];
+    state.rooms.filter(calc.isClassified).forEach(function (r) {
+      out.push(r);
+      var za = (r.design || {}).zoneArea;
+      if (calc.minPoints(za) !== null) {
+        out.push({ id: r.id + '_z', no: r.no, name: (r.name || '') + ' — рабочая зона', area: String(za), volume: '', cls: r.cls, design: {}, zone: true });
+      }
+    });
+    return out;
+  };
+
   /* Номер протокола: три знака номера в реестре (с 5-го) и порядковый номер */
   P.number = function (state, room) {
-    var list = state.rooms.filter(calc.isClassified), i = list.indexOf(room);
+    var list = P.rooms(state).map(function (r) { return r.id; }), i = list.indexOf(room.id);
     var first = calc.num(state.skch.firstNo);
     if (i < 0 || first === null) return '';
     var prefix = String(state.obj.registry || '').substr(4, 3);

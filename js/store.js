@@ -17,7 +17,8 @@
       }),
       rooms: [],
       skch: { date: '', flow: '28.3', firstNo: '1', rooms: {} },
-      tivl: { date: '', firstNo: '', env: { t: '', rh: '', p: '' }, note: '', rooms: {} }
+      tivl: { date: '', firstNo: '', env: { t: '', rh: '', p: '' }, note: '', rooms: {} },
+      t: {}
     };
   };
 
@@ -45,6 +46,7 @@
       ['date', 'flow', 'firstNo'].forEach(function (f) { if (d.skch[f] != null) b.skch[f] = String(d.skch[f]); });
       if (d.skch.rooms && typeof d.skch.rooms === 'object') b.skch.rooms = d.skch.rooms;
     }
+    if (d.t && typeof d.t === 'object' && !Array.isArray(d.t)) b.t = d.t;
     if (d.tivl) {
       ['date', 'firstNo', 'note'].forEach(function (f) { if (d.tivl[f] != null) b.tivl[f] = String(d.tivl[f]); });
       for (k in b.tivl.env) if (d.tivl.env && d.tivl.env[k] != null) b.tivl.env[k] = String(d.tivl.env[k]);
