@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Квалификация чистых помещений — расчёты GMP / ИСО 14644-1</title>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/print.css" media="print">
+</head>
+<body>
+
+<!-- ======================= Шапка и панель действий ======================= -->
+<header class="app-header no-print">
+  <div class="app-header__inner">
+    <div class="app-title">
+      <h1>Квалификация чистых помещений</h1>
+      <p>Расчёты по GMP и ГОСТ Р ИСО 14644-1</p>
+    </div>
+    <div class="toolbar">
+      <button type="button" class="btn" id="btn-reset">Очистить</button>
+      <button type="button" class="btn" id="btn-import">Импорт JSON</button>
+      <button type="button" class="btn" id="btn-export">Экспорт JSON</button>
+      <button type="button" class="btn btn--primary" id="btn-protocol" disabled
+              title="Печатная форма появится на шаге 4">Сформировать протокол</button>
+      <input type="file" id="file-import" accept="application/json,.json" hidden>
+    </div>
+  </div>
+  <div class="app-header__inner">
+    <p class="save-status" id="save-status" role="status"></p>
+  </div>
+</header>
+
+<main class="app-main" id="app">
+
+  <!-- ======================= 1. Параметры помещения ======================= -->
+  <section class="card" aria-labelledby="h-room">
+    <h2 id="h-room"><span class="card__num">1</span>Параметры помещения</h2>
+
+    <div class="form-grid">
+      <div class="field field--wide">
+        <label for="room-name">Название помещения</label>
+        <input type="text" id="room-name" data-bind="room.name" autocomplete="off"
+               placeholder="Помещение розлива">
+      </div>
+      <div class="field">
+        <label for="room-code">Код помещения</label>
+        <input type="text" id="room-code" data-bind="room.code" autocomplete="off" placeholder="1.2.07">
+      </div>
+      <div class="field">
+        <label for="meta-date">Дата испытаний</label>
+        <input type="date" id="meta-date" data-bind="meta.date">
+      </div>
+      <div class="field field--wide">
+        <label for="meta-performer">Исполнитель</label>
+        <input type="text" id="meta-performer" data-bind="meta.performer" autocomplete="off"
+               placeholder="Должность, Ф. И. О.">
+      </div>
+
+      <div class="field">
+        <label for="room-area">Площадь, м²</label>
+        <input type="text" inputmode="decimal" class="input-num" id="room-area"
+               data-bind="room.area" data-type="number" data-positive autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="room-height">Высота, м</label>
+        <input type="text" inputmode="decimal" class="input-num" id="room-height"
+               data-bind="room.height" data-type="number" data-positive autocomplete="off">
+      </div>
+      <div class="field">
+        <span class="field__label">Объём, м³</span>
+        <output class="output" id="out-volume" for="room-area room-height">—</output>
+        <span class="field__hint">площадь × высота</span>
+      </div>
+    </div>
+
+    <div class="form-grid form-grid--class">
+      <div class="field field--wide">
+        <label for="meta-standard">Нормативная база</label>
+        <select id="meta-standard" data-bind="meta.standard">
+          <option value="mpt916">Приказ Минпромторга № 916, Приложение № 1</option>
+          <option value="eu2022">EU GMP Annex 1 (редакция 2022 г.)</option>
+        </select>
+      </div>
+
+      <fieldset class="field segmented">
+        <legend>Класс чистоты</legend>
+        <div class="segmented__row">
+          <label><input type="radio" name="grade" value="A" data-bind="room.grade"><span>A</span></label>
+          <label><input type="radio" name="grade" value="B" data-bind="room.grade"><span>B</span></label>
+          <label><input type="radio" name="grade" value="C" data-bind="room.grade"><span>C</span></label>
+          <label><input type="radio" name="grade" value="D" data-bind="room.grade"><span>D</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="field segmented">
+        <legend>Состояние</legend>
+        <div class="segmented__row">
+          <label><input type="radio" name="state" value="atRest" data-bind="room.state"><span>Оснащённое</span></label>
+          <label><input type="radio" name="state" value="inOperation" data-bind="room.state"><span>Эксплуатируемое</span></label>
+        </div>
+      </fieldset>
+    </div>
+
+    <dl class="facts">
+      <div>
+        <dt>Эквивалент по ИСО 14644-1</dt>
+        <dd id="out-iso">—</dd>
+      </div>
+      <div>
+        <dt>Минимум точек отбора проб, N<sub>L</sub></dt>
+        <dd id="out-nl">—</dd>
+      </div>
+      <div>
+        <dt>Предел, частицы ≥ 0,5 мкм, шт./м³</dt>
+        <dd id="lim-p05">—</dd>
+      </div>
+      <div>
+        <dt>Предел, частицы ≥ 5,0 мкм, шт./м³</dt>
+        <dd id="lim-p50">—</dd>
+      </div>
+    </dl>
+    <p class="note" id="lim-source"></p>
+  </section>
+
+  <!-- ======================= 2. Карта замеров ======================= -->
+  <section class="card" aria-labelledby="h-map">
+    <h2 id="h-map"><span class="card__num">2</span>Карта замеров</h2>
+
+    <!-- 2.1 Воздухообмен -->
+    <section class="block" aria-labelledby="h-air">
+      <div class="block__head">
+        <h3 id="h-air">2.1. Воздухообмен</h3>
+        <button type="button" class="btn btn--small no-print" id="btn-add-diffuser" disabled
+                title="Добавление точек появится на шаге 3">Добавить диффузор</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table" id="tbl-airflow">
+          <thead>
+            <tr>
+              <th scope="col" class="col-n">№</th>
+              <th scope="col">Точка замера (диффузор)</th>
+              <th scope="col" class="num">Расход, м³/ч</th>
+              <th scope="col" class="col-act no-print"><span class="sr-only">Действия</span></th>
+            </tr>
+          </thead>
+          <tbody id="airflow-body">
+            <tr class="empty-row"><td colspan="4">Точки замера не добавлены.</td></tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row" colspan="2">Суммарный расход, м³/ч</th>
+              <td class="num" id="out-flow-total">—</td>
+              <td class="no-print"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table result-table">
+          <thead>
+            <tr>
+              <th scope="col">Показатель</th>
+              <th scope="col" class="num">Фактически</th>
+              <th scope="col">Критерий приемлемости</th>
+              <th scope="col" class="col-status">Заключение</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Кратность воздухообмена, ч⁻¹</th>
+              <td class="num" id="out-ach">—</td>
+              <td>
+                <label class="crit">не менее
+                  <input type="text" inputmode="decimal" class="input-num input-num--crit" id="crit-ach"
+                         data-bind="criteria.achMin.$grade" data-type="number" autocomplete="off"
+                         aria-label="Минимальная кратность воздухообмена для выбранного класса">
+                </label>
+                <span class="crit__hint">для класса <span id="crit-ach-grade">C</span></span>
+              </td>
+              <td><span class="status status--none" id="st-ach">НЕТ ДАННЫХ</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note" id="crit-ach-note" hidden>
+        Для зоны класса A с однонаправленным потоком показателем служит скорость потока
+        (ориентир 0,36–0,54 м/с), а не кратность. Оставьте критерий пустым, если кратность не оценивается.
+      </p>
+      <p class="note">
+        Кратность = суммарный расход ÷ объём помещения. Документы GMP значение кратности не нормируют:
+        критерий берётся из проекта или URS, по умолчанию подставлено ориентировочное значение.
+      </p>
+    </section>
+
+    <!-- 2.2 Давление и микроклимат -->
+    <section class="block" aria-labelledby="h-env">
+      <div class="block__head">
+        <h3 id="h-env">2.2. Перепад давления и микроклимат</h3>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table result-table">
+          <thead>
+            <tr>
+              <th scope="col">Показатель</th>
+              <th scope="col" class="num">Измерено</th>
+              <th scope="col">Критерий приемлемости</th>
+              <th scope="col" class="col-status">Заключение</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row"><label for="env-dp">Перепад давления ΔP, Па</label></th>
+              <td class="num">
+                <input type="text" inputmode="decimal" class="input-num" id="env-dp"
+                       data-bind="env.dp" data-type="number" autocomplete="off">
+              </td>
+              <td>
+                <label class="crit">не менее
+                  <input type="text" inputmode="decimal" class="input-num input-num--crit"
+                         data-bind="criteria.dpMin" data-type="number" autocomplete="off"
+                         aria-label="Минимальный перепад давления, Па">
+                </label>
+              </td>
+              <td><span class="status status--none" id="st-dp">НЕТ ДАННЫХ</span></td>
+            </tr>
+            <tr>
+              <th scope="row"><label for="env-temp">Температура, °C</label></th>
+              <td class="num">
+                <input type="text" inputmode="decimal" class="input-num" id="env-temp"
+                       data-bind="env.temp" data-type="number" autocomplete="off">
+              </td>
+              <td>
+                <label class="crit">от
+                  <input type="text" inputmode="decimal" class="input-num input-num--crit"
+                         data-bind="criteria.tempMin" data-type="number" autocomplete="off"
+                         aria-label="Минимальная температура, °C">
+                </label>
+                <label class="crit">до
+                  <input type="text" inputmode="decimal" class="input-num input-num--crit"
+                         data-bind="criteria.tempMax" data-type="number" autocomplete="off"
+                         aria-label="Максимальная температура, °C">
+                </label>
+              </td>
+              <td><span class="status status--none" id="st-temp">НЕТ ДАННЫХ</span></td>
+            </tr>
+            <tr>
+              <th scope="row"><label for="env-rh">Относительная влажность, %</label></th>
+              <td class="num">
+                <input type="text" inputmode="decimal" class="input-num" id="env-rh"
+                       data-bind="env.rh" data-type="number" autocomplete="off">
+              </td>
+              <td>
+                <label class="crit">от
+                  <input type="text" inputmode="decimal" class="input-num input-num--crit"
+                         data-bind="criteria.rhMin" data-type="number" autocomplete="off"
+                         aria-label="Минимальная влажность, %">
+                </label>
+                <label class="crit">до
+                  <input type="text" inputmode="decimal" class="input-num input-num--crit"
+                         data-bind="criteria.rhMax" data-type="number" autocomplete="off"
+                         aria-label="Максимальная влажность, %">
+                </label>
+              </td>
+              <td><span class="status status--none" id="st-rh">НЕТ ДАННЫХ</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">
+        Перепад давления измеряется относительно соседнего помещения более низкого класса.
+        Диапазоны температуры и влажности GMP не устанавливает — укажите значения из проекта или
+        требований к продукту.
+      </p>
+    </section>
+
+    <!-- 2.3 Счётная концентрация частиц -->
+    <section class="block" aria-labelledby="h-part">
+      <div class="block__head">
+        <h3 id="h-part">2.3. Счётная концентрация аэрозольных частиц</h3>
+        <button type="button" class="btn btn--small no-print" id="btn-add-point" disabled
+                title="Добавление точек появится на шаге 3">Добавить точку отбора</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table" id="tbl-particles">
+          <thead>
+            <tr>
+              <th scope="col" class="col-n">№</th>
+              <th scope="col">Точка отбора проб</th>
+              <th scope="col" class="num">≥ 0,5 мкм, шт./м³</th>
+              <th scope="col" class="num">≥ 5,0 мкм, шт./м³</th>
+              <th scope="col" class="col-act no-print"><span class="sr-only">Действия</span></th>
+            </tr>
+          </thead>
+          <tbody id="particles-body">
+            <tr class="empty-row"><td colspan="5">Точки отбора проб не добавлены.</td></tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row" colspan="2">Среднее по помещению</th>
+              <td class="num" id="out-p05-avg">—</td>
+              <td class="num" id="out-p50-avg">—</td>
+              <td class="no-print"></td>
+            </tr>
+            <tr>
+              <th scope="row" colspan="2">Максимум по точкам</th>
+              <td class="num" id="out-p05-max">—</td>
+              <td class="num" id="out-p50-max">—</td>
+              <td class="no-print"></td>
+            </tr>
+            <tr>
+              <th scope="row" colspan="2">Заключение</th>
+              <td><span class="status status--none" id="st-p05">НЕТ ДАННЫХ</span></td>
+              <td><span class="status status--none" id="st-p50">НЕТ ДАННЫХ</span></td>
+              <td class="no-print"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p class="note">
+        По ГОСТ Р ИСО 14644-1-2017 помещение соответствует классу, если концентрация в каждой точке
+        отбора не превышает предел. Среднее по помещению приводится справочно.
+      </p>
+    </section>
+  </section>
+
+  <!-- ======================= 3. Итог ======================= -->
+  <section class="card" aria-labelledby="h-result">
+    <h2 id="h-result"><span class="card__num">3</span>Итоговое заключение</h2>
+    <p class="verdict">
+      <span class="status status--none status--large" id="st-overall">НЕТ ДАННЫХ</span>
+      <span class="verdict__text" id="out-overall-text">Заключение формируется после ввода замеров.</span>
+    </p>
+  </section>
+
+  <!-- ======================= 4. Справочник норм ======================= -->
+  <section class="card no-print" aria-labelledby="h-ref">
+    <h2 id="h-ref"><span class="card__num">4</span>Справочник норм</h2>
+
+    <h3>Предельная концентрация частиц, шт./м³</h3>
+    <div class="table-wrap">
+      <table class="data-table ref-table">
+        <thead>
+          <tr>
+            <th scope="col" rowspan="2">Класс</th>
+            <th scope="colgroup" colspan="2">Оснащённое состояние</th>
+            <th scope="colgroup" colspan="2">Эксплуатируемое состояние</th>
+            <th scope="col" rowspan="2">Класс ИСО<br>(оснащ. / экспл.)</th>
+          </tr>
+          <tr>
+            <th scope="col" class="num">≥ 0,5 мкм</th>
+            <th scope="col" class="num">≥ 5,0 мкм</th>
+            <th scope="col" class="num">≥ 0,5 мкм</th>
+            <th scope="col" class="num">≥ 5,0 мкм</th>
+          </tr>
+        </thead>
+        <tbody id="ref-particles-body"></tbody>
+      </table>
+    </div>
+    <p class="note">Источник: <span id="ref-source"></span>. Выделены значения для выбранных класса и состояния.</p>
+    <ul class="note-list" id="ref-notes"></ul>
+
+    <details class="details">
+      <summary>Минимальное число точек отбора проб (ГОСТ Р ИСО 14644-1-2017, таблица A.1)</summary>
+      <div class="table-wrap">
+        <table class="data-table ref-table ref-table--narrow">
+          <thead>
+            <tr>
+              <th scope="col" class="num">Площадь, м², не более</th>
+              <th scope="col" class="num">N<sub>L</sub></th>
+              <th scope="col" class="num">Площадь, м², не более</th>
+              <th scope="col" class="num">N<sub>L</sub></th>
+            </tr>
+          </thead>
+          <tbody id="ref-iso-body"></tbody>
+        </table>
+      </div>
+      <p class="note">При площади более 1000 м²: N<sub>L</sub> = 27 × (площадь ÷ 1000), с округлением вверх.</p>
+    </details>
+  </section>
+
+</main>
+
+<!-- Контейнер печатной формы протокола (шаг 4) -->
+<div id="protocol" class="protocol" hidden></div>
+
+<footer class="app-footer no-print">
+  <p>Данные не покидают этот компьютер: хранение в браузере, перенос — файлом JSON.
+     Справочные значения сверяйте с действующими редакциями нормативных документов.</p>
+</footer>
+
+<script src="js/gmp-limits.js"></script>
+<script src="js/state.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/measurements.js"></script>
+<script src="js/protocol.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
