@@ -81,7 +81,7 @@
     /* Строка шапки, которая обязана уместиться в одну: длинный текст печатается мельче */
     function one(text) {
       text = String(text).replace(/\s+/g, ' ').trim();
-      var size = Math.max(6, Math.min(9, Math.floor(9 * 98 / Math.max(text.length, 1) * 10) / 10));
+      var size = Math.max(7, Math.min(9, Math.floor(9 * 105 / Math.max(text.length, 1) * 10) / 10));
       return '<div class="ln full"><span class="vl one" style="font-size:' + size + 'pt">' + esc(text) + '</span></div>';
     }
     h += '<header class="lab">' +
@@ -89,7 +89,8 @@
       l('Юридический адрес организации:', lab.legalAddress) +
       l('Наименование лаборатории:', lab.unit) +
       l('Фактический адрес места осуществления<br>деятельности (адрес лаборатории)', lab.address) +
-      one('Номер телефона, адрес электронной почты, сайт ' + lab.contacts) +
+      '<div class="ln tel"><span class="lb">Номер телефона, адрес электронной почты, сайт</span>' +
+        '<span class="vl one" style="font-size:9pt">' + esc(String(lab.contacts).replace(/\s+/g, ' ').trim()) + '</span></div>' +
       (lab.accredShow !== 'нет' ? one('Уникальный номер записи об аккредитации в реестре аккредитованных лиц ' + lab.accred) : '') +
       '</header>';
 

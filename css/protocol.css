@@ -106,3 +106,6 @@
 .sheet .lab .ln .vl { white-space: pre-line; }
 .sheet .tools .lb.head { width: 36mm; white-space: nowrap; }
 .sheet .lab .ln .vl.one { white-space: nowrap; overflow: hidden; }
+.sheet .lab .ln.tel .lb { width: auto; }
+.sheet .lab .ln.tel .vl { padding-left: 1mm; }
+.sheet .lab .ln.tel { border-bottom: .75pt solid #000; } .sheet .lab .ln.tel .vl { border-bottom: 0; }

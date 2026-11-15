@@ -384,7 +384,10 @@
     Array.prototype.forEach.call(document.querySelectorAll('#print .vl.one'), function (el) {
       var size = 9;
       el.style.fontSize = size + 'pt';
-      while (size > 5.5 && el.scrollWidth > el.clientWidth) { size -= 0.25; el.style.fontSize = size + 'pt'; }
+      el.style.whiteSpace = '';
+      while (size > 7 && el.scrollWidth > el.clientWidth) { size -= 0.25; el.style.fontSize = size + 'pt'; }
+      /* совсем длинный текст не мельчим дальше, а переносим на вторую строку */
+      if (el.scrollWidth > el.clientWidth) { el.style.fontSize = '8pt'; el.style.whiteSpace = 'normal'; }
     });
     window.scrollTo(0, 0);
   }
