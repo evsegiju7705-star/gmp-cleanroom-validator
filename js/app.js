@@ -43,6 +43,16 @@
   function oldDateHint(v) {
     return v && !/^\d{4}-\d{2}-\d{2}$/.test(v) ? 'Сейчас записано текстом: «' + v + '». Выберите дату в календаре' : '';
   }
+  /* Выбор сотрудника из списка; пока список пуст — обычное поле */
+  function person(label, role) {
+    var list = S().staff.filter(function (p) { return p.name.trim(); }), cur = S().obj[role], id = 'f-staff-' + role;
+    if (!list.length) return field(label, 'obj.' + role, { hint: 'Добавьте сотрудников в список ниже — здесь появится выбор' });
+    var names = list.map(function (p) { return p.name; });
+    var h = '<option value=""' + (cur ? '' : ' selected') + '>— не выбран —</option>';
+    if (cur && names.indexOf(cur) < 0) h += '<option selected value="' + esc(cur) + '">' + esc(cur) + ' (нет в списке)</option>';
+    h += list.map(function (p) { return '<option value="' + esc(p.name) + '"' + (p.name === cur ? ' selected' : '') + '>' + esc(p.name) + '</option>'; }).join('');
+    return '<div class="field"><label for="' + id + '">' + esc(label) + '</label><select id="' + id + '" data-staff="' + role + '">' + h + '</select></div>';
+  }
   function viewGeneral() {
     return '<section class="card"><h2>Лаборатория</h2><p class="note">Печатается в шапке каждого протокола.</p><div class="form">' +
       field('Наименование организации', 'lab.name', { wide: true }) +
@@ -73,13 +83,20 @@
       field('Номер первого протокола', 'obj.firstNo', { mode: 'numeric', hint: 'Дальше номера идут подряд по испытаниям, как в рабочей книге' }) +
       '</div></section>' +
       '<section class="card"><h2>Исполнители и условия</h2><div class="form">' +
-      field('Измерения провёл (фамилия и инициалы)', 'obj.performer') +
+      person('Протокол составил (фамилия и инициалы)', 'performer') +
       field('Должность', 'obj.performerPost') +
-      field('Утвердил (фамилия и инициалы)', 'obj.approver') +
+      person('Утвердил (фамилия и инициалы)', 'approver') +
       field('Должность', 'obj.approverPost') +
       field('Особые условия проведения измерений', 'obj.special', { options: ref.specials }) +
       field('Режим работы систем вентиляции', 'obj.ventMode') +
-      '</div></section>';
+      '</div><h3>Список сотрудников</h3><p class="note">Из этого списка выбираются «Протокол составил» и «Утвердил»; должность подставляется сама.</p>' +
+      (S().staff.length ? '<div class="table-wrap"><table class="data staff"><thead><tr><th scope="col">Фамилия и инициалы</th><th scope="col">Должность</th><th scope="col"><span class="visually-hidden">Действия</span></th></tr></thead><tbody>' +
+        S().staff.map(function (p, i) {
+          return '<tr><td><input aria-label="Фамилия и инициалы, строка ' + (i + 1) + '" data-bind="staff.' + i + '.name" value="' + esc(p.name) + '"></td>' +
+            '<td><input aria-label="Должность, строка ' + (i + 1) + '" data-bind="staff.' + i + '.post" value="' + esc(p.post) + '"></td>' +
+            '<td><button type="button" class="danger small" data-act="staff-del" data-i="' + i + '">Удалить</button></td></tr>';
+        }).join('') + '</tbody></table></div>' : '') +
+      '<button type="button" data-act="staff-add">Добавить сотрудника</button></section>';
   }
 
   /* ---------- Приборы ---------- */
@@ -407,8 +424,30 @@
   function onChange(e) {
     if (e.target.id === 'room-select') { currentRoomId = e.target.value; pasteOpen = false; render(); return; }
     if (e.target.id === 'e-room') { K.engine.selectRoom(K.tests.byKey[tab], e.target.value); render(); return; }
+    if (e.target.dataset && e.target.dataset.staff) {
+      var role = e.target.dataset.staff, who = S().staff.filter(function (p) { return p.name === e.target.value; })[0];
+      S().obj[role] = e.target.value;
+      S().obj[role + 'Post'] = who ? who.post : '';
+      saved(); render(); return;
+    }
     var path = e.target.dataset && e.target.dataset.bind;
     if (!path) return;
+    /* список сотрудников: после правки обновить выпадающие списки и должности выбранных */
+    if (/^staff\./.test(path)) {
+      ['performer', 'approver'].forEach(function (role) {
+        var p = S().staff.filter(function (x) { return x.name === S().obj[role]; })[0];
+        if (p) S().obj[role + 'Post'] = p.post;
+      });
+      saved();
+      /* перерисовка после того, как фокус перейдёт в следующее поле, и возврат фокуса на место */
+      setTimeout(function () {
+        var act = document.activeElement, bnd = act && act.dataset && act.dataset.bind;
+        render();
+        var el = bnd && document.querySelector('[data-bind="' + bnd + '"]');
+        if (el) el.focus();
+      }, 0);
+      return;
+    }
     /* поля, от которых зависит состав экрана */
     if (/^skch\.(flow|firstNo)$/.test(path) || path === 'obj.special') render();
   }
@@ -476,6 +515,12 @@
     else if (act === 'print-one') { preview([currentRoom()]); return; }
     else if (act === 'print-all') { preview(skchRooms(), true); return; }
     else if (act === 'pass-print') { showPreview(K.passport.build()); return; }
+    else if (act === 'staff-add') { S().staff.push({ name: '', post: '' }); }
+    else if (act === 'staff-del') {
+      var sp = S().staff[+b.dataset.i];
+      if (sp && (sp.name || sp.post) && !confirm('Удалить сотрудника «' + sp.name + '» из списка?')) return;
+      S().staff.splice(+b.dataset.i, 1);
+    }
     else if (act === 'logo-del') {
       if (!confirm('Удалить логотип?')) return;
       S().lab.logo = '';

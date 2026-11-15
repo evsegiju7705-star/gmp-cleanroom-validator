@@ -78,3 +78,4 @@ table.design thead th { min-width: 110px; }
 .visually-hidden:focus-visible + p, .file-btn:has(+ .visually-hidden:focus-visible) { outline: 3px solid #f0a500; outline-offset: 2px; }
 .logo-row { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
 .logo-thumb { max-height: 4.5rem; max-width: 9rem; border: 1px solid #c9d1d9; background: #fff; padding: 2px; }
+table.staff input { width: 100%; }

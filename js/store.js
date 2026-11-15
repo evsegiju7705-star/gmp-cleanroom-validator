@@ -16,6 +16,7 @@
         return { type: t[0], model: '', serial: '', validTo: '' };
       }),
       rooms: [],
+      staff: [],
       skch: { date: '', flow: '28.3', firstNo: '', rooms: {} },
       tivl: { date: '', firstNo: '', env: { t: '', rh: '', p: '' }, note: '', rooms: {} },
       t: {},
@@ -46,6 +47,11 @@
     if (d.skch) {
       ['date', 'flow', 'firstNo'].forEach(function (f) { if (d.skch[f] != null) b.skch[f] = String(d.skch[f]); });
       if (d.skch.rooms && typeof d.skch.rooms === 'object') b.skch.rooms = d.skch.rooms;
+    }
+    if (Array.isArray(d.staff)) {
+      b.staff = d.staff.filter(Boolean).map(function (p) {
+        return { name: String(p.name == null ? '' : p.name), post: String(p.post == null ? '' : p.post) };
+      });
     }
     if (d.t && typeof d.t === 'object' && !Array.isArray(d.t)) b.t = d.t;
     if (d.schemes && typeof d.schemes === 'object' && !Array.isArray(d.schemes)) b.schemes = d.schemes;
