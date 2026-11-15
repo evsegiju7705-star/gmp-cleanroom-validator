@@ -106,7 +106,7 @@
   E.view = function (def) {
     var t = E.data(def), base = 't.' + def.key + '.', rooms = def.rooms(S());
     var h = '<section class="card"><h2>Параметры испытания</h2><div class="form">' +
-      K.ui.field('Дата измерений', base + 'date', { hint: 'Текстом, например «25 сентября 2025 г.»' }) +
+      K.ui.field('Дата измерений', base + 'date', { type: 'date', hint: K.ui.oldDateHint(t.date) }) +
       K.ui.field(def.perRoom ? 'Номер первого протокола' : 'Номер протокола', base + 'firstNo', { mode: 'numeric', hint: 'Пусто — по сквозной нумерации: ' + (E.number(def, def.rooms(S())[0]) || 'не задана') }) +
       (def.extras || []).map(function (x) { return K.ui.field(x.label, base + 'x.' + x.k, x.options ? { options: x.options } : {}); }).join('') +
       '</div><h3>Условия окружающей среды</h3><div class="form five">' +

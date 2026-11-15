@@ -199,7 +199,7 @@
     var s = S();
     return '<section class="sheet">' + B.head(s).replace(/<div class="approve">[\s\S]*$/, '') +
       '<h1>Расходы воздуха по помещениям (по сети)</h1><table class="info">' + B.row('Объект:', s.obj.object) +
-      B.row('Местонахождение:', s.obj.location) + B.row('Дата измерений:', (s.t.flow || {}).date || '') + '</table>' +
+      B.row('Местонахождение:', s.obj.location) + B.row('Дата измерений:', K.calc.fmtDate((s.t.flow || {}).date || '')) + '</table>' +
       passTables(s, true) + '</section>';
   };
   K.passport = Pp;

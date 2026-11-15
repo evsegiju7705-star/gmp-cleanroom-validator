@@ -25,7 +25,7 @@
     h += '<table class="info">' + B.row('Объект:', o.object) + B.row('Местонахождение:', o.location) +
       B.row('Заказчик:', o.customer) + B.row('ИНН Заказчика:', o.inn) + '</table>';
     h += B.tools(state, P.instruments);
-    h += '<table class="info">' + B.row('Дата измерений:', t.date) +
+    h += '<table class="info">' + B.row('Дата измерений:', calc.fmtDate(t.date)) +
       B.row('Режим работы систем вентиляции:', o.ventMode) +
       B.row('Нормативная документация на проведение измерений:', 'ГОСТ Р ИСО 14644-3-2020 п. В.5, В.6') + '</table>';
     h += '<p><b>КРИТЕРИЙ ПРИЕМЛЕМОСТИ:</b> Средние измеренные значения температуры и относительной влажности ' +

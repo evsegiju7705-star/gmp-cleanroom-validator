@@ -39,6 +39,10 @@
   }
 
   /* ---------- Общие данные ---------- */
+  /* Раньше дата измерений вводилась текстом: показываем старую запись, пока не выбрана дата в календаре */
+  function oldDateHint(v) {
+    return v && !/^\d{4}-\d{2}-\d{2}$/.test(v) ? 'Сейчас записано текстом: «' + v + '». Выберите дату в календаре' : '';
+  }
   function viewGeneral() {
     return '<section class="card"><h2>Лаборатория</h2><p class="note">Печатается в шапке каждого протокола.</p><div class="form">' +
       field('Наименование организации', 'lab.name', { wide: true }) +
@@ -241,7 +245,7 @@
   function viewTivl() {
     var rooms = K.protocolTivl.rooms(S());
     var h = '<section class="card"><h2>Параметры испытания</h2><div class="form">' +
-      field('Дата измерений', 'tivl.date', { hint: 'Текстом, например «13-17 февраля 2025 г.»' }) +
+      field('Дата измерений', 'tivl.date', { type: 'date', hint: oldDateHint(S().tivl.date) }) +
       field('Номер протокола', 'tivl.firstNo', { mode: 'numeric', hint: 'Один протокол на все помещения. Пусто — по сквозной нумерации' }) +
       '</div><h3>Условия окружающей среды</h3><div class="form five">' +
       field('Температура, °С', 'tivl.env.t', { mode: 'decimal' }) +
@@ -514,7 +518,7 @@
       if (!def || !inp.dataset || !inp.dataset.grid || !e.clipboardData) return;
       if (K.engine.paste(def, inp, e.clipboardData.getData('text'))) { e.preventDefault(); saved(); render(); }
     });
-    K.ui = { field: field, showPreview: showPreview };
+    K.ui = { oldDateHint: oldDateHint, field: field, showPreview: showPreview };
     $('#tabs').insertAdjacentHTML('beforeend', K.tests.list.map(function (d) {
       return '<button type="button" data-tab="' + d.key + '">' + esc(d.tab) + '</button>';
     }).join('') + '<button type="button" data-tab="passport">Паспорт систем</button>');
