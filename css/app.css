@@ -79,3 +79,5 @@ table.design thead th { min-width: 110px; }
 .logo-row { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
 .logo-thumb { max-height: 4.5rem; max-width: 9rem; border: 1px solid #c9d1d9; background: #fff; padding: 2px; }
 table.staff input { width: 100%; }
+.app-logo { height: 2.5rem; width: auto; border-radius: 4px; background: #fff; margin-right: auto; }
+.app-logo[hidden] { display: none; }

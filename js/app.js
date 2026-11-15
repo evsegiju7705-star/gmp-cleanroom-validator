@@ -336,6 +336,9 @@
   }
 
   function render() {
+    /* логотип организации в шапке приложения */
+    var lg = document.getElementById('app-logo'), src = /^data:image\//.test(S().lab.logo || '') ? S().lab.logo : '';
+    if (lg) { if (src) lg.src = src; else lg.removeAttribute('src'); lg.hidden = !src; }
     var views = { general: viewGeneral, instruments: viewInstruments, rooms: viewRooms, skch: viewSkch, tivl: viewTivl };
     var isTest = tab === 'skch' || tab === 'tivl' || !!K.tests.byKey[tab];
     view.innerHTML = (tab === 'passport' ? K.passport.view() : views[tab] ? views[tab]() : K.engine.view(K.tests.byKey[tab])) +
