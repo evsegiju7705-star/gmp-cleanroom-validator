@@ -42,3 +42,7 @@
 .sheet table.grid td.left { text-align: left; }
 .sheet tbody.keep { break-inside: avoid; }
 .sheet .small-note { font-size: 8.5pt; }
+.sheet .lab.with-logo { display: flex; align-items: center; gap: 4mm; }
+.sheet .lab .logo { flex: none; max-width: 28mm; max-height: 22mm; }
+.sheet .lab .lab-text { flex: 1; }
+.sheet .lab.with-logo .lab-text { padding-right: 14mm; }

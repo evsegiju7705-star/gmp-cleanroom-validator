@@ -46,7 +46,11 @@
       field('Подразделение', 'lab.unit') +
       field('Адрес', 'lab.address', { wide: true }) +
       field('Контакты и номер записи об аккредитации', 'lab.contacts', { wide: true, area: true }) +
-      '</div></section>' +
+      '</div><h3>Логотип</h3><p class="note">Печатается слева в шапке каждого протокола.</p><div class="logo-row">' +
+      (S().lab.logo ? '<img class="logo-thumb" alt="Логотип организации" src="' + S().lab.logo + '">' +
+        '<button type="button" class="danger small" data-act="logo-del">Удалить логотип</button>' : '') +
+      '<label class="file-btn" for="logo-file">' + (S().lab.logo ? 'Заменить логотип' : 'Загрузить логотип (картинка)') + '</label>' +
+      '<input type="file" id="logo-file" accept="image/*" class="visually-hidden"></div><p id="logo-msg" class="note" role="status"></p></section>' +
       '<section class="card"><h2>Объект и заказчик</h2><div class="form">' +
       field('Объект испытаний', 'obj.object', { wide: true }) +
       field('Заказчик (полностью)', 'obj.customer', { wide: true, area: true }) +
@@ -369,7 +373,25 @@
     /* поля, от которых зависит состав экрана */
     if (/^skch\.(flow|firstNo)$/.test(path) || path === 'obj.special') render();
   }
+  function onLogo(f) {
+    if (!f) return;
+    function put(data) {
+      var old = S().lab.logo;
+      S().lab.logo = data || old;
+      var ok = !!data && store.save();
+      if (!ok) S().lab.logo = old;
+      saved(); render();
+      if (!ok) $('#logo-msg').textContent = 'Логотип не загружен: файл не является картинкой или в хранилище браузера не хватило места.';
+    }
+    if (!/^image\//.test(f.type)) { put(''); return; }
+    if (f.size > 150000) { K.extras.shrink(f, put); return; }   /* большие файлы сжимаем, мелкие храним как есть (с прозрачностью) */
+    var r = new FileReader();
+    r.onload = function () { put(String(r.result)); };
+    r.onerror = function () { put(''); };
+    r.readAsDataURL(f);
+  }
   function onFiles(e) {
+    if (e.target.id === 'logo-file') { onLogo(e.target.files && e.target.files[0]); return; }
     if (e.target.id !== 'scheme-file') return;
     var files = Array.prototype.slice.call(e.target.files || []), key = tab, left = files.length, bad = 0;
     if (!left) return;
@@ -413,6 +435,10 @@
     else if (act === 'print-one') { preview([currentRoom()]); return; }
     else if (act === 'print-all') { preview(skchRooms(), true); return; }
     else if (act === 'pass-print') { showPreview(K.passport.build()); return; }
+    else if (act === 'logo-del') {
+      if (!confirm('Удалить логотип?')) return;
+      S().lab.logo = '';
+    }
     else if (act === 'scheme-del') {
       if (!confirm('Удалить схему?')) return;
       K.extras.schemes(tab).splice(+b.dataset.i, 1);

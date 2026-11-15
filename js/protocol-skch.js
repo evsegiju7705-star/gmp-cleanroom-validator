@@ -62,10 +62,12 @@
   /* Шапка лаборатории и гриф утверждения */
   P.head = function (state) {
     var lab = state.lab, o = state.obj, h = '';
-    h += '<header class="lab"><div class="lab-name">' + esc(lab.name) + '</div>' +
+    var logo = /^data:image\//.test(lab.logo || '') ? lab.logo : '';
+    h += '<header class="lab' + (logo ? ' with-logo' : '') + '">' + (logo ? '<img class="logo" alt="" src="' + logo + '">' : '') +
+      '<div class="lab-text"><div class="lab-name">' + esc(lab.name) + '</div>' +
       (lab.short ? '<div>(' + esc(lab.short) + ')</div>' : '') +
       '<div>' + esc(lab.unit) + '</div><div>' + esc(lab.address) + '</div>' +
-      '<div class="pre">' + esc(lab.contacts) + '</div></header>';
+      '<div class="pre">' + esc(lab.contacts) + '</div></div></header>';
 
     h += '<div class="approve"><div>УТВЕРЖДАЮ</div><div class="line">' + esc(o.approverPost) + '</div>' +
       '<small>должность</small><div class="line sign"><span></span><span>' + esc(o.approver) + '</span></div>' +
