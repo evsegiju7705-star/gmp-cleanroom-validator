@@ -84,7 +84,7 @@
   var IN_KINDS = ['Приток', 'Внутр. очистка', 'Переток'], OUT_KINDS = ['Вытяжка', 'Внутр. очистка', 'Переток'];
   function terminalCols(kinds) {
     return [{ k: 'kind', label: 'Вид', options: kinds, def: kinds[0] }, { k: 'sys', label: 'Система', text: true },
-      { k: 'name', label: 'Обозначение', text: true }, { k: 'v', label: 'Скорость, м/с' }, { k: 'area', label: 'Проходное сечение, м²' },
+      { k: 'dev', label: 'Устройство (тип)', text: true }, { k: 'name', label: 'Обозначение', text: true }, { k: 'v', label: 'Скорость, м/с' }, { k: 'area', label: 'Проходное сечение, м²' },
       { k: 'qp', label: 'Расход по проекту, м³/ч' }];
   }
   var TERM_OUTS = [{ k: 'verr', label: 'Погрешность скорости, м/с' }, { k: 'q', label: 'Объём воздуха, м³/ч' }];
@@ -129,16 +129,53 @@
     nd: 'ФР.1.29.2004.01164', instruments: ['anemo', 'thermo', 'baro'],
     extras: [{ k: 'tol', label: 'Допуск от проектных значений, ± %', def: '8' }],
     criterion: function (s, room, x) {
-      return 'Объём поступающего воздуха, кратность воздухообмена соответствуют значениям, указанным в проектной документации, с допуском ±' + (x.tol || '…') + ' %.';
+      return 'Объём поступающего воздуха, кратность воздухообмена соответствуют значениям, указанным в проектной документации с допуском ±' + (x.tol || '…') + '%.';
     },
     rooms: function (s) { return s.rooms.filter(function (r) { return has(r, 'supply') || has(r, 'exhaust') || has(r, 'ach') || has(r, 'recirc'); }); },
-    facts: function (room) { return [['Объём помещения, м³', room.volume || '–'], ['Класс чистоты', room.cls || 'НК']]; },
+    facts: function (room) { return [['Объём помещения*, м3', room.volume || '–'], ['Класс чистоты*', room.cls || 'НК']]; },
     groups: [
       { k: 'in', title: 'Поступающий воздух', min: 1, cols: terminalCols(IN_KINDS), outs: TERM_OUTS },
       { k: 'out', title: 'Удаляемый воздух', min: 0, cols: terminalCols(OUT_KINDS), outs: TERM_OUTS }
     ],
-    footnote: 'Измеренная скорость потока воздуха определяется как среднее арифметическое измерений в нескольких точках. ' +
-      'Измерительный прибор автоматически определяет среднее значение по серии измерений.',
+    noSpecial: true, noteNo: '3. ',
+    protoBody: function (ctx) {
+      var it = ctx.rooms[0], esc = ctx.esc, room = it.room, r = T.flowCalc(room, it.data, ctx.x.tol);
+      var dash = '–', n = function (v) { return v ? String(v) : dash; };
+      var d = function (k) { return has(room, k) ? String(room.design[k]).replace('.', ',') : dash; };
+      function tbl(title, dev, flowTitle, sysTitle, rows, res, kinds) {
+        var h = '<h3 class="tbl plain">' + title + '</h3><table class="grid flow"><thead><tr>' +
+          '<th rowspan="2" style="width:5%">Сис-тема</th><th rowspan="2" style="width:15%">' + dev + '</th><th rowspan="2" style="width:13%">Обозначение</th>' +
+          '<th rowspan="2" style="width:15%">Среднее значение скорости воздуха, м/сек**</th><th rowspan="2" style="width:9%">Проход-ное сечение, м2</th>' +
+          '<th rowspan="2" style="width:10%">Объём воздуха, проходящего через ' + (kinds === IN_KINDS ? 'ВР' : 'УВ') + ', м3/час</th>' +
+          '<th colspan="4">' + flowTitle + '</th></tr><tr><th>' + sysTitle + '</th><th>Внутр. Очистка</th><th>Переток</th><th>Всего</th></tr></thead><tbody>';
+        var cnt = Math.max(rows.length, 1);
+        for (var i = 0; i < cnt; i++) {
+          var w = rows[i] || {}, o = res.rows[i] || {};
+          h += '<tr><td>' + esc(w.sys) + '</td><td>' + esc(w.dev) + '</td><td>' + esc(w.name) + '</td>' +
+            '<td>' + esc(String(w.v == null ? '' : w.v).trim().replace('.', ',')) + (o.verr ? ' ' + esc(o.verr) : '') + '</td>' +
+            '<td>' + esc(String(w.area == null ? '' : w.area).trim().replace('.', ',')) + '</td><td>' + esc(o.q || '') + '</td>';
+          if (i === 0) h += kinds.map(function (k) { return '<td class="tot" rowspan="' + cnt + '">' + (rows.length ? n(res.sum[k]) : dash) + '</td>'; }).join('') +
+            '<td class="tot" rowspan="' + cnt + '">' + (rows.length ? n(res.total) : dash) + '</td>';
+          h += '</tr>';
+        }
+        return h + '</tbody></table>';
+      }
+      var h = tbl('1. Поступающий воздух', 'Воздухораспреде-литель (ВР)', 'Поступающий в помещение воздух, м3/час', 'Приточная система', it.data.g['in'], r.I, IN_KINDS) +
+        tbl('2. Удаляемый воздух', 'Устройство воздухоудаления (УВ)', 'Удаляемый из помещения воздух, м3/час', 'Вытяжная система', it.data.g.out, r.O, OUT_KINDS);
+      var after = '<p class="foot-note">** Измеренная скорость потока воздуха определяется как среднее арифметическое измерений в нескольких точках. ' +
+        'Измерительный прибор автоматически определяет среднее значение по серии измерений.<br>' +
+        '*** Величина определена с помощью измерительной воронкой.</p>' +
+        '<table class="grid sum"><thead><tr><th colspan="6">Объём поступающего воздуха, м3/час</th><th colspan="6">Объём удаляемого воздуха, м3/час</th></tr>' +
+        '<tr><th colspan="2">Приток</th><th colspan="2">Внутр. Очистка</th><th colspan="2">Переток</th><th colspan="2">Вытяжка</th><th colspan="2">Внутр. Очистка</th><th colspan="2">Переток</th></tr>' +
+        '<tr>' + new Array(7).join('<th>проект</th><th>факт</th>') + '</tr></thead><tbody><tr>' +
+        [[d('supply'), r.I.sum['Приток']], [d('recirc'), r.I.sum['Внутр. очистка']], [d('flowIn'), r.I.sum['Переток']],
+         [d('exhaust'), r.O.sum['Вытяжка']], [d('recirc'), r.O.sum['Внутр. очистка']], [d('flowOut'), r.O.sum['Переток']]]
+          .map(function (p) { return '<td class="v">' + esc(p[0]) + '</td><td class="v">' + n(p[1]) + '</td>'; }).join('') + '</tr></tbody></table>';
+      var side = '<table class="grid ach"><thead><tr><th colspan="3">Кратность воздухообмена, ч-1</th></tr>' +
+        '<tr><th>проект</th><th>факт</th><th>отклонение, %</th></tr></thead><tbody><tr><td class="v">' + (r.achProj === null ? dash : fx(r.achProj, 1)) +
+        '</td><td class="v">' + (r.achFact === null ? dash : fx(r.achFact, 1)) + '</td><td class="v">' + (r.dev === null ? dash : fx(r.dev, 1)) + '</td></tr></tbody></table>';
+      return { before: h, after: after, side: side };
+    },
     calc: function (room, data, state, x) {
       var r = T.flowCalc(room, data, x.tol), d = function (k) { return has(room, k) ? String(room.design[k]) : '–'; };
       var f = function (n) { return n ? String(n) : '–'; };

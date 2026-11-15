@@ -251,28 +251,30 @@
     var s = S(), o = s.obj, t = E.data(def), x = t.x, room = def.perRoom ? rooms[0] : null;
     var items = rooms.map(function (r) { return { room: r, data: E.roomData(def, r), res: E.calcRoom(def, r) }; });
     var no = E.number(def, room), verdict = K.tests.overall(items.map(function (it) { return it.res.verdict; }));
-    var h = '<section class="sheet">' + B.head(s) +
-      '<h1>ПРОТОКОЛ № ' + esc(no) + ' от ' + esc(calc.fmtDate(o.protoDate)) + '</h1><h2>' + esc(def.title) + '</h2>';
-    h += '<table class="info">' + B.row('Объект:', o.object) + B.row('Местонахождение:', o.location) +
-      B.row('Заказчик:', o.customer) + B.row('ИНН Заказчика:', o.inn);
+    var ln = B.ln, body;
+    var h = '<section class="sheet">' + B.head(s) + B.title(s, no, esc(def.title)) + B.customer(s);
     if (room) {
-      h += B.row('Номер и наименование помещения:', (room.no ? '№' + room.no + ' - ' : '') + room.name);
-      (def.facts ? def.facts(room) : []).forEach(function (f) { h += B.row(f[0] + ':', f[1]); });
+      h += ln('Номер и наименование помещения*', (room.no ? '№' + room.no + ' - ' : '') + room.name);
+      var facts = def.facts ? def.facts(room) : [], args = [];
+      facts.forEach(function (f) { args.push(f[0], { v: f[1], w: 24, c: 1 }); });
+      if (args.length) h += ln.apply(null, args).replace('class="ln"', 'class="ln left"');
     }
-    h += '</table>' + B.tools(s, def.instruments) + '<table class="info">' + B.row('Дата измерений:', t.date) +
-      B.row('Режим работы систем вентиляции:', o.ventMode) +
-      B.row('Нормативная документация на проведение измерений:', def.nd) +
-      B.row('Особые условия проведения измерений:', o.special);
-    (def.extras || []).forEach(function (e) { if (e.k !== 'exceed') h += B.row(e.label + ':', x[e.k]); });
-    h += '</table><p><b>КРИТЕРИЙ ПРИЕМЛЕМОСТИ:</b> ' + esc(def.criterion(s, room, x)) + '</p>';
-    h += '<h3 class="center">Условия окружающей среды</h3><table class="grid"><thead><tr>' +
-      envKeys(def).map(function (e) { return '<th>' + e[1] + '</th>'; }).join('') + '</tr></thead><tbody><tr>' +
-      envKeys(def).map(function (e) { return '<td>' + esc(t.env[e[0]]) + '&nbsp;</td>'; }).join('') +
-      '</tr></tbody></table><p>Проведение испытаний при данных внешних условиях ДОПУСКАЕТСЯ</p>';
-    h += def.protoBody ? def.protoBody({ rooms: items, esc: esc }) : resultTables(def, items) + sumTable(items, def.perRoom);
+    h += B.tools(s, def.instruments) +
+      ln('Дата измерений', { v: calc.fmtDate(t.date), w: 34, c: 1 }, 'Режим работы систем вентиляции', { v: o.ventMode, c: 1 }) +
+      ln('Нормативная документация на проведение измерений', { v: def.nd, c: 1 });
+    if (!def.noSpecial) h += ln('Особые условия проведения измерений:', { v: o.special, c: 1 }) +
+      '<div class="sub-note">(наличие технологического оборудования, его состояние и т.д.)</div>';
+    (def.extras || []).forEach(function (e) { if (e.k !== 'exceed' && e.k !== 'tol') h += ln(e.label + ':', { v: x[e.k], c: 1 }); });
+    h += B.disclaimer(s);
+    h += '<div class="crit"><div class="crit-h">КРИТЕРИЙ<br>ПРИЕМЛЕМОСТИ:</div><div class="crit-t big">' + esc(def.criterion(s, room, x)) + '</div></div>';
+    h += B.env(t.env, envKeys(def).map(function (e) { return e[0]; }));
+    body = def.protoBody ? def.protoBody({ rooms: items, esc: esc, x: x, state: s }) : resultTables(def, items) + sumTable(items, def.perRoom);
+    if (typeof body === 'string') body = { before: body, after: '' };
+    h += body.before;
     if (def.footnote) h += '<p class="small-note">' + esc(def.footnote) + '</p>';
-    h += '<h3>Дополнения, отклонения, исключения из метода</h3><p>' + esc(t.note || 'нет') + '</p>';
-    return h + B.tail(s, no, verdict) + '</section>';
+    h += '<h3 class="tbl plain it">' + (def.noteNo || '') + 'Дополнения, отклонения, исключения из метода</h3><div class="ln"><span class="vl">' + esc(t.note || 'нет') + '</span></div>';
+    h += body.after || '';
+    return h + B.tail(s, no, verdict, body.side) + '</section>';
   };
   E.buildAll = function (def) {
     var rooms = def.rooms(S());
