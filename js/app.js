@@ -564,9 +564,13 @@
       if (K.engine.paste(def, inp, e.clipboardData.getData('text'))) { e.preventDefault(); saved(); render(); }
     });
     K.ui = { oldDateHint: oldDateHint, field: field, showPreview: showPreview };
-    $('#tabs').insertAdjacentHTML('beforeend', K.tests.list.map(function (d) {
-      return '<button type="button" data-tab="' + d.key + '">' + esc(d.tab) + '</button>';
-    }).join('') + '<button type="button" data-tab="passport">Паспорт систем</button>');
+    /* порядок вкладок испытаний */
+    var names = { skch: 'Концентрация частиц', tivl: 'Температура и влажность', passport: 'Паспорт систем' };
+    K.tests.list.forEach(function (d) { names[d.key] = d.tab; });
+    $('#tabs').insertAdjacentHTML('beforeend',
+      ['flow', 'unif', 'integ', 'eff', 'davl', 'skch', 'tivl', 'lux', 'noise', 'recov', 'passport'].map(function (k) {
+        return '<button type="button" data-tab="' + k + '">' + esc(names[k]) + '</button>';
+      }).join(''));
     $('#tabs').addEventListener('click', function (e) {
       var b = e.target.closest('[data-tab]');
       if (b) { tab = b.dataset.tab; pasteOpen = false; render(); }
