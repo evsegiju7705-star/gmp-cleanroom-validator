@@ -49,18 +49,20 @@
     if (!Array.isArray(all[key])) all[key] = [];
     return all[key];
   };
-  X.schemesCard = function (key) {
-    var list = X.schemes(key);
-    var h = '<section class="card"><h2>Схемы расположения точек</h2><p class="note">Планы помещений с нанесёнными точками. ' +
-      'Печатаются приложением к протоколу. Картинки уменьшаются при загрузке и хранятся вместе с данными.</p>';
+  X.schemesCard = function (key, o) {
+    o = o || {};
+    var list = X.schemes(key), fid = 'scheme-file-' + key.replace(/[^a-z0-9]/gi, '_');
+    var h = '<section class="card"><h2>' + (o.title || 'Схемы расположения точек') + '</h2><p class="note">' +
+      (o.note || 'Планы помещений с нанесёнными точками. Печатаются приложением к протоколу. Картинки уменьшаются при загрузке и хранятся вместе с данными.') + '</p>';
     if (list.length) {
       h += '<ul class="schemes">' + list.map(function (s, i) {
         return '<li><img src="' + s.data + '" alt="Схема: ' + esc(s.name) + '"><span>' + esc(s.name) + '</span>' +
-          '<button type="button" class="danger small" data-act="scheme-del" data-i="' + i + '">Удалить</button></li>';
+          '<button type="button" class="danger small" data-act="scheme-del" data-key="' + esc(key) + '" data-i="' + i + '">Удалить</button></li>';
       }).join('') + '</ul>';
     }
-    return h + '<label class="file-btn" for="scheme-file">Добавить схему (картинка)</label>' +
-      '<input type="file" id="scheme-file" accept="image/*" multiple class="visually-hidden"><p id="scheme-msg" class="note" role="status"></p></section>';
+    return h + '<label class="file-btn" for="' + fid + '">' + (o.single ? (list.length ? 'Заменить план' : 'Загрузить план (картинка)') : 'Добавить схему (картинка)') + '</label>' +
+      '<input type="file" id="' + fid + '" data-key="' + esc(key) + '"' + (o.single ? ' data-single="1"' : ' multiple') +
+      ' accept="image/*" class="scheme-input visually-hidden"><p class="note scheme-msg" data-key="' + esc(key) + '" role="status"></p></section>';
   };
   /* Уменьшает картинку до 1500 точек по большей стороне и отдаёт JPEG */
   X.shrink = function (file, done) {

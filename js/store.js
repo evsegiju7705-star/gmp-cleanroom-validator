@@ -8,8 +8,8 @@
   store.blank = function () {
     return {
       version: 1,
-      lab: { name: '', short: '', unit: '', address: '', contacts: '', logo: '' },
-      obj: { object: '', customer: '', inn: '', location: '', index: 'КЧП', registry: '',
+      lab: { name: '', short: '', unit: '', unitShort: '', legalAddress: '', address: '', contacts: '', accred: '', logo: '' },
+      obj: { object: '', customer: '', custLegal: '', custActual: '', inn: '', location: '', docNo: '', index: 'КЧП', registry: '',
              performer: '', performerPost: '', approver: '', approverPost: '',
              special: 'нет', ventMode: 'Рабочий (основной)', protoDate: '', firstNo: '' },
       instruments: ref.instrumentTypes.map(function (t) {

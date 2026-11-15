@@ -41,11 +41,14 @@
   /* ---------- Общие данные ---------- */
   function viewGeneral() {
     return '<section class="card"><h2>Лаборатория</h2><p class="note">Печатается в шапке каждого протокола.</p><div class="form">' +
-      field('Полное наименование организации', 'lab.name', { wide: true }) +
-      field('Сокращённое наименование', 'lab.short') +
-      field('Подразделение', 'lab.unit') +
-      field('Адрес', 'lab.address', { wide: true }) +
-      field('Контакты и номер записи об аккредитации', 'lab.contacts', { wide: true, area: true }) +
+      field('Наименование организации', 'lab.name', { wide: true }) +
+      field('Сокращённое наименование организации', 'lab.short') +
+      field('Юридический адрес организации', 'lab.legalAddress', { wide: true }) +
+      field('Наименование лаборатории', 'lab.unit', { wide: true }) +
+      field('Сокращённое наименование лаборатории', 'lab.unitShort', { hint: 'Например, АЦВИ. Идёт в нижнюю строку протокола' }) +
+      field('Фактический адрес места осуществления деятельности (адрес лаборатории)', 'lab.address', { wide: true, area: true }) +
+      field('Номер телефона, адрес электронной почты, сайт', 'lab.contacts', { wide: true }) +
+      field('Уникальный номер записи об аккредитации в реестре аккредитованных лиц', 'lab.accred') +
       '</div><h3>Логотип</h3><p class="note">Печатается слева в шапке каждого протокола.</p><div class="logo-row">' +
       (S().lab.logo ? '<img class="logo-thumb" alt="Логотип организации" src="' + S().lab.logo + '">' +
         '<button type="button" class="danger small" data-act="logo-del">Удалить логотип</button>' : '') +
@@ -54,8 +57,11 @@
       '<section class="card"><h2>Объект и заказчик</h2><div class="form">' +
       field('Объект испытаний', 'obj.object', { wide: true }) +
       field('Заказчик (полностью)', 'obj.customer', { wide: true, area: true }) +
-      field('ИНН заказчика', 'obj.inn') +
+      field('Юридический адрес заказчика', 'obj.custLegal', { wide: true }) +
+      field('Фактический адрес заказчика', 'obj.custActual', { wide: true }) +
+      field('ИНН заказчика, данные заявки, договора', 'obj.inn', { wide: true }) +
       field('Индекс (КЧП или КМСК)', 'obj.index') +
+      field('Номер после индекса', 'obj.docNo', { hint: 'Например, МЗМО-862. Вместе с индексом печатается внизу каждой страницы' }) +
       field('Местонахождение объекта', 'obj.location', { wide: true }) +
       field('Номер в реестре', 'obj.registry', { hint: 'Знаки с 5-го по 7-й идут в номер протокола' }) +
       field('Дата протокола', 'obj.protoDate', { type: 'date' }) +
@@ -311,6 +317,9 @@
     var views = { general: viewGeneral, instruments: viewInstruments, rooms: viewRooms, skch: viewSkch, tivl: viewTivl };
     var isTest = tab === 'skch' || tab === 'tivl' || !!K.tests.byKey[tab];
     view.innerHTML = (tab === 'passport' ? K.passport.view() : views[tab] ? views[tab]() : K.engine.view(K.tests.byKey[tab])) +
+      (tab === 'skch' && currentRoom() ? K.extras.schemesCard('skch:' + currentRoom().id, {
+        title: 'План помещения с точками (в протокол)', single: true,
+        note: 'Печатается внутри протокола этого помещения, в разделе «Расположение контрольных точек на плане помещения». Если плана нет, в протоколе остаётся пустое место.' }) : '') +
       (isTest ? K.extras.schemesCard(tab) : '');
     Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) {
       b.setAttribute('aria-current', b.dataset.tab === tab ? 'page' : 'false');
@@ -351,8 +360,24 @@
     showPreview(rooms.map(function (r) { return K.protocolSkch.build(S(), r); }).join('') +
       (withAppendix ? K.extras.appendix('skch') + K.extras.schemeSheets('skch') : ''));
   }
+  /* Нижняя строка каждой страницы: у каждого протокола своя именованная страница */
+  function cssStr(s) { return '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\s+/g, ' ') + '"'; }
+  function pageFooters() {
+    var st = document.getElementById('print-style'), css = '', n = 0;
+    if (!st) { st = document.createElement('style'); st.id = 'print-style'; document.head.appendChild(st); }
+    Array.prototype.forEach.call(document.querySelectorAll('#print .sheet'), function (sheet) {
+      var f = sheet.querySelector('footer[data-foot]');
+      if (!f) return;
+      var name = 'pg' + (n++);
+      sheet.style.page = name;
+      css += '@page ' + name + ' { @bottom-left { content: ' + cssStr(f.dataset.warn) + '; } ' +
+        '@bottom-right { content: ' + cssStr(f.dataset.foot + '   Стр. ') + ' counter(page) " из " counter(pages); } }\n';
+    });
+    st.textContent = css;
+  }
   function showPreview(html) {
     $('#print').innerHTML = html;
+    pageFooters();
     $('#preview').hidden = false; $('#app').hidden = true;
     window.scrollTo(0, 0);
   }
@@ -392,19 +417,21 @@
   }
   function onFiles(e) {
     if (e.target.id === 'logo-file') { onLogo(e.target.files && e.target.files[0]); return; }
-    if (e.target.id !== 'scheme-file') return;
-    var files = Array.prototype.slice.call(e.target.files || []), key = tab, left = files.length, bad = 0;
+    if (!e.target.classList.contains('scheme-input')) return;
+    var files = Array.prototype.slice.call(e.target.files || []), key = e.target.dataset.key || tab, left = files.length, bad = 0;
+    var single = e.target.dataset.single === '1';
+    if (single) files = files.slice(0, 1), left = files.length;
     if (!left) return;
     files.forEach(function (f) {
       K.extras.shrink(f, function (data) {
         if (data) {
-          var list = K.extras.schemes(key);
+          var list = K.extras.schemes(key), old = single ? list.splice(0, list.length) : null;
           list.push({ name: f.name, data: data });
-          if (!store.save()) { list.pop(); bad++; }
+          if (!store.save()) { list.pop(); if (old) Array.prototype.push.apply(list, old); bad++; }
         } else bad++;
         if (--left === 0) {
           saved(); render();
-          if (bad) $('#scheme-msg').textContent = 'Не добавлено файлов: ' + bad + '. Файл не является картинкой или в хранилище браузера не хватило места.';
+          if (bad) $('.scheme-msg[data-key="' + key + '"]').textContent = 'Не добавлено файлов: ' + bad + '. Файл не является картинкой или в хранилище браузера не хватило места.';
         }
       });
     });
@@ -418,7 +445,7 @@
     else if (act === 'del-room') {
       var r = S().rooms[+b.dataset.i];
       if (!confirm('Удалить помещение «' + roomLabel(r) + '» вместе с его замерами?')) return;
-      S().rooms.splice(+b.dataset.i, 1); delete S().skch.rooms[r.id]; delete S().skch.rooms[r.id + '_z']; delete S().tivl.rooms[r.id];
+      S().rooms.splice(+b.dataset.i, 1); delete S().skch.rooms[r.id]; delete S().skch.rooms[r.id + '_z']; delete S().tivl.rooms[r.id]; delete S().schemes['skch:' + r.id]; delete S().schemes['skch:' + r.id + '_z'];
       Object.keys(S().t).forEach(function (k) { if (S().t[k].rooms) delete S().t[k].rooms[r.id]; });
     }
     else if (act === 'add-point') { store.skchData(currentRoom()).points.push({ a: ['', '', ''], b: ['', '', ''] }); }
@@ -441,7 +468,7 @@
     }
     else if (act === 'scheme-del') {
       if (!confirm('Удалить схему?')) return;
-      K.extras.schemes(tab).splice(+b.dataset.i, 1);
+      K.extras.schemes(b.dataset.key || tab).splice(+b.dataset.i, 1);
     }
     else if (act === 'tv-print') { showPreview(K.protocolTivl.build(S()) + K.extras.schemeSheets('tivl')); return; }
     else if (act === 'tv-add' || act === 'tv-del') {
