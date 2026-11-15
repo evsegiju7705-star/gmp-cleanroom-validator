@@ -78,13 +78,19 @@
     function l(label, value) {
       return '<div class="ln"><span class="lb">' + label + '</span><span class="vl">' + esc(value) + '</span></div>';
     }
+    /* Строка шапки, которая обязана уместиться в одну: длинный текст печатается мельче */
+    function one(text) {
+      text = String(text).replace(/\s+/g, ' ').trim();
+      var size = Math.max(6, Math.min(9, Math.floor(9 * 98 / Math.max(text.length, 1) * 10) / 10));
+      return '<div class="ln full"><span class="vl one" style="font-size:' + size + 'pt">' + esc(text) + '</span></div>';
+    }
     h += '<header class="lab">' +
       l('Наименование организации:', lab.name + (lab.short ? ' (' + lab.short + ')' : '')) +
       l('Юридический адрес организации:', lab.legalAddress) +
       l('Наименование лаборатории:', lab.unit) +
       l('Фактический адрес места осуществления<br>деятельности (адрес лаборатории)', lab.address) +
-      '<div class="ln full"><span class="vl">Номер телефона, адрес электронной почты, сайт ' + esc(lab.contacts) + '</span></div>' +
-      '<div class="ln full"><span class="vl">Уникальный номер записи об аккредитации в реестре аккредитованных лиц ' + esc(lab.accred) + '</span></div>' +
+      one('Номер телефона, адрес электронной почты, сайт ' + lab.contacts) +
+      (lab.accredShow !== 'нет' ? one('Уникальный номер записи об аккредитации в реестре аккредитованных лиц ' + lab.accred) : '') +
       '</header>';
 
     h += '<div class="approve"><div class="logo-box">' + (logo ? '<img class="logo" alt="" src="' + logo + '">' : '') + '</div>' +

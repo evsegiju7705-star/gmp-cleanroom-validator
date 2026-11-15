@@ -8,7 +8,7 @@
   store.blank = function () {
     return {
       version: 1,
-      lab: { name: '', short: '', unit: '', unitShort: '', legalAddress: '', address: '', contacts: '', accred: '', logo: '' },
+      lab: { name: '', short: '', unit: '', unitShort: '', legalAddress: '', address: '', contacts: '', accred: '', accredShow: 'да', logo: '' },
       obj: { object: '', customer: '', custLegal: '', custActual: '', inn: '', location: '', docNo: '', index: 'КЧП', registry: '',
              performer: '', performerPost: '', approver: '', approverPost: '',
              special: 'нет', ventMode: 'Рабочий (основной)', protoDate: '', firstNo: '' },

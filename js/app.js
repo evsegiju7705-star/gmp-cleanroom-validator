@@ -49,6 +49,7 @@
       field('Фактический адрес места осуществления деятельности (адрес лаборатории)', 'lab.address', { wide: true, area: true }) +
       field('Номер телефона, адрес электронной почты, сайт', 'lab.contacts', { wide: true }) +
       field('Уникальный номер записи об аккредитации в реестре аккредитованных лиц', 'lab.accred') +
+      field('Печатать строку об аккредитации в шапке протокола', 'lab.accredShow', { options: ['да', 'нет'] }) +
       '</div><h3>Логотип</h3><p class="note">Печатается слева в шапке каждого протокола.</p><div class="logo-row">' +
       (S().lab.logo ? '<img class="logo-thumb" alt="Логотип организации" src="' + S().lab.logo + '">' +
         '<button type="button" class="danger small" data-act="logo-del">Удалить логотип</button>' : '') +
@@ -379,6 +380,12 @@
     $('#print').innerHTML = html;
     pageFooters();
     $('#preview').hidden = false; $('#app').hidden = true;
+    /* строки шапки, обязанные уместиться в одну: берём наибольший шрифт, при котором текст помещается */
+    Array.prototype.forEach.call(document.querySelectorAll('#print .vl.one'), function (el) {
+      var size = 9;
+      el.style.fontSize = size + 'pt';
+      while (size > 5.5 && el.scrollWidth > el.clientWidth) { size -= 0.25; el.style.fontSize = size + 'pt'; }
+    });
     window.scrollTo(0, 0);
   }
   function closePreview() { $('#preview').hidden = true; $('#app').hidden = false; $('#print').innerHTML = ''; }
